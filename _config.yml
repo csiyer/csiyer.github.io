@@ -21,7 +21,7 @@ repository               : "csiyer/csiyer.github.io"
 #               Additional customization can be done by editing /_includes/author-profile.html
 author:
   # Biographic information
-  avatar           : "images/senior_cropped.jpg"
+  avatar           : "/images/senior_cropped.jpg"
   name             : "Chris iyer"
   pronouns         : # example: "she/her"  
   bio              : "PhD student / neuroscientist / trumpet"
@@ -29,6 +29,7 @@ author:
   employer         : "Columbia University"
   uri              : # URL
   email            : "c.iyer@columbia.edu" 
+  twitter          : "chrissiyer" # Username for X / Twitter
 
   # Academic websites
   arxiv            : # URL - Update with the correct link to your profile
@@ -65,7 +66,6 @@ author:
   steam            : # Username
   telegram         : # URL
   tumblr           : # Username
-  twitter          : "chrissiyer" # Username for X / Twitter
   vine             : # Username
   weibo            : # Username
   wikipedia        : # Username
