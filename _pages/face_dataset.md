@@ -68,7 +68,7 @@ I have also collected a sample of 135 online participants performing a 2-part ta
 
 <img src='/images/face_dataset/face_memorytask.png' width="90%">
 
-<img src='/images/face_dataset/face_memorytask2.png' width="80%">
+<img src='/images/face_dataset/face_memorytask2.png' width="89%">
 
 All of these data are available upon email request.
 
