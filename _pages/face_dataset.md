@@ -32,10 +32,15 @@ Finally, I grayscaled and luminance matched the images I used, to produce a fina
 <img src='/images/face_dataset/face_array.png'>
 The dataset I've created can be viewed and downloaded from [GitHub](https://github.com/csiyer/face_database). This repository contains 156 individuals, and is organized as follows: 
 (1) `blender_faces` contains the 3D `.blend` object (3D mesh) to be opened and edited in blender.
+
 (2) `blender_faces/textures` contains 2D image textures, automatically loaded by the `.blend` files and overlaid onto the meshes.
+
 (3) `version1_gray_lm1` contains, for each individual, 15 grayscale and luminance-matched images from a 5x3 grid of viewpoints (pictured above). Files are named `id{#}_{Degrees left/right/center}{L/R/C}_{up/down/center U/D/C}.png`.
+
 (4) `notes` contains notes on artifacts, exclusions, and edits during the processing pipeline, for each identity.
+
 (5) `scripts` contains scripts to match luminance of grayscale iamges, calculate model-based estimates of image memorability, generate metadata, etc. 
+
 (6) `classification_metadata` contains data extracted from the classification task, described in more detail below.
 
 
