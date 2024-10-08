@@ -59,7 +59,7 @@ To view licensing/public viewing criteria or to obtain the raw images used, see 
 ## 1. Classification task
 I have collected 2 different kinds of behavioral data using these faces. In the first task, 241 online participants classified each of the faces with the following format: 
 
-<img src='/images/face_dataset/face_classification.png' width="50%">
+<img src='/images/face_dataset/face_classification.png' width="70%">
 
 These behavioral ratings provide a population-level estimate of perceived racial and gender characteristics of the faces, rather than relying on idiosyncratic manual judgements. They also offer continuous responses (response percentages) to quantify these characteristics in a non-binarized or non-categorized fashion.
 
@@ -68,7 +68,7 @@ I have also collected a sample of 135 online participants performing a 2-part ta
 
 <img src='/images/face_dataset/face_memorytask.png' width="90%">
 
-<img src='/images/face_dataset/face_memorytask2.png' width="90%">
+<img src='/images/face_dataset/face_memorytask2.png' width="80%">
 
 All of these data are available upon email request.
 
