@@ -30,13 +30,14 @@ Finally, I grayscaled and luminance matched the images I used, to produce a fina
 
 ## Dataset
 <img src='/images/face_dataset/face_array.png'>
-The dataset of faces I've build here comprises {N} individuals. For each individual, there are:
-(1) 15 grayscale images from a 5x3 grid of viewpoints (pictured above) 
-(2) 15 full-color images from the 5x3 grid
-(3) a `.blend` object with the 3D mesh 
-(4) a 2D image texture, which when combined with the 3D mesh forms a full 3D face
+The dataset I've created can be viewed and downloaded from [GitHub](https://github.com/csiyer/face_database). This repository contains 156 individuals, and is organized as follows: 
+(1) `blender_faces` contains the 3D `.blend` object (3D mesh) to be opened and edited in blender.
+(2) `blender_faces/textures` contains 2D image textures, automatically loaded by the `.blend` files and overlaid onto the meshes.
+(3) `version1_gray_lm1` contains, for each individual, 15 grayscale and luminance-matched images from a 5x3 grid of viewpoints (pictured above). Files are named `id{#}_{Degrees left/right/center}{L/R/C}_{up/down/center U/D/C}.png`.
+(4) `notes` contains notes on artifacts, exclusions, and edits during the processing pipeline, for each identity.
+(5) `scripts` contains scripts to match luminance of grayscale iamges, calculate model-based estimates of image memorability, generate metadata, etc. 
+(6) `classification_metadata` contains data extracted from the classification task, described in more detail below.
 
-The dataset I've created can be viewed and downloaded from [GitHub]().
 
 To view licensing/public viewing criteria or to obtain the raw images used, see the [MUCT Face Database](http://www.milbo.org/muct/). 
 
