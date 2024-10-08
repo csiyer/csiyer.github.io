@@ -7,11 +7,14 @@ author_profile: true
 
 {% include base_path %}
 
-# Background
+# Face Dataset
 In my [undergraduate thesis research](https://purl.stanford.edu/ym602qk4242), I wanted to study race-related biases in face memory, with a high degree of experimental and psychophysical control. I had three key criteria:
+
 (1) Faces must sample thoroughly from a wide array of appearances, ages, and race-related features. This rules out many old-school datasets in the racial bias literature that only use very stereotypically white and black (usually male) faces.
+
 (2) Faces must be *imaged from different angles*. This was very important to me, as I wanted to test specifically for people's ability to generalize encoding of one face view to a novel perspective--a kind of medial temporal lobe-dependent representational transformation. Sadly, this ruled out any web-scraped face datasets, which would only image an individual from one angle (for examples commonly used in machine learning training sets, see [here](https://paperswithcode.com/datasets?task=face-recognition)). 
-(1) Face images must be well controlled for low-level cues (luminance, viewing angle, etc.). My gold standards here are the [Chicago Face Dataset](https://www.chicagofaces.org) and the beautiful [Humanae](https://angelicadass.com/photography/humanae/) project by Angélica Dass. These images, however, are only from one angle, so #2 rules them out. The way that most previous experiments achieve this level of control is using [FaceGen](https://facegen.com)--if you have ever seen these faces, you likely know why I didn't want to use them. They are quite uncanny, and I did not believe that I could count on them activating the same in-the-wild biases that I was trying to study.
+
+(3) Face images must be well controlled for low-level cues (luminance, viewing angle, etc.). My gold standards here were the [Chicago Face Dataset](https://www.chicagofaces.org) and the beautiful [Humanae](https://angelicadass.com/photography/humanae/) project by Angélica Dass. These images, however, are only from one angle, so #2 rules them out. The way that most previous experiments achieve this level of control is using [FaceGen](https://facegen.com)--if you have ever seen these faces, you likely know why I didn't want to use them. They are quite uncanny, and I did not believe that I could count on them activating the same in-the-wild biases that I was trying to study.
 
 I did manage to find one old face dataset, the [MUCT Face Database](http://www.milbo.org/muct/), that satisfies both broad/dense sampling of appearance and multiple viewpoints per subject. However, the low-level features were not very reliable. So, I decided to make my own faces, using MUCT as a starting point!
 
