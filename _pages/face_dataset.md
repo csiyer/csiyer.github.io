@@ -32,10 +32,14 @@ Each 3D face model can then be rotated by a particular angle and imaged under co
 </p>
 
 
-Finally, I grayscaled and luminance matched the images I used, to produce a final set of faces. For each face, this produced an array of images.
+Finally, I grayscaled and luminance matched the images I used, to produce a final set of faces. 
 <p style="text-align: center;">
     <img src='/images/face_dataset/faces_grayscale.png'>
-    <img src='/images/face_dataset/face_array.png' width="90%">
+<\p>
+
+For each face, imaging each face across 5 horizontal and 3 vertical angles produced an array of 15 images:
+<p style="text-align: center;">
+    <img src='/images/face_dataset/face_array.png' width="80%">
 </p>
 
 
