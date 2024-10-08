@@ -21,7 +21,7 @@ repository               : "csiyer/csiyer.github.io"
 #               Additional customization can be done by editing /_includes/author-profile.html
 author:
   # Biographic information
-  avatar           : "/images/bio-photo.jpg"
+  avatar           : "/images/profile.png"
   name             : "Chris iyer"
   pronouns         : # example: "she/her"  
   bio              : # "PhD student"
