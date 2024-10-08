@@ -1,6 +1,6 @@
 ---
 layout: archive
-title: "Face Dataset"
+title: ""
 permalink: /face_dataset/
 author_profile: true
 ---
