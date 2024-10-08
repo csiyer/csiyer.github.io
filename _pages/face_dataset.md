@@ -17,10 +17,14 @@ I did manage to find one old face dataset, the [MUCT Face Database](http://www.m
 
 ## Methods
 I used [FaceBuilder for Blender](https://keentools.io/products/facebuilder-for-blender) to manually landmark the multi-viewpoint MUCT images. Faces or images that couldn't be reliably landmarked, or showed abnormal expressions or viewpoints were discarded.
-<img src='/images/face_dataset/face_landmarking.png'>
+<p style="text-align: center;">
+  <img src='/images/face_dataset/face_landmarking.png' width="75%">
+</p>
 
 This created, for each face, a 3D mesh and texture (.blend object). The textures themselves were manually altered to remove image artifacts from the 3D rendering process. 
-<img src='/images/face_dataset/face_rotate.gif'>
+<p style="text-align: center;">
+  <img src='/images/face_dataset/face_rotate.gif' width="50%">
+</p>
 
 Each 3D face model can then be rotated by a particular angle and imaged under controlled lighting conditions. 
 <img src='/images/face_dataset/faces.png'>
@@ -31,6 +35,7 @@ Finally, I grayscaled and luminance matched the images I used, to produce a fina
 ## Dataset
 <img src='/images/face_dataset/face_array.png'>
 The dataset I've created can be viewed and downloaded from [GitHub](https://github.com/csiyer/face_database). This repository contains 156 individuals, and is organized as follows: 
+
 (1) `blender_faces` contains the 3D `.blend` object (3D mesh) to be opened and edited in blender.
 
 (2) `blender_faces/textures` contains 2D image textures, automatically loaded by the `.blend` files and overlaid onto the meshes.
