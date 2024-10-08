@@ -35,6 +35,7 @@ Finally, I grayscaled and luminance matched the images I used, to produce a fina
 
 <img src='/images/face_dataset/face_array.png' width="50%>
 
+
 ## Dataset
 The dataset I've created can be viewed and downloaded from [GitHub](https://github.com/csiyer/face_database). This repository contains 156 individuals, and is organized as follows: 
 
@@ -57,6 +58,7 @@ To view licensing/public viewing criteria or to obtain the raw images used, see 
 ## Behavioral Data (on request)
 ### 1. Classification task
 I have collected 2 different kinds of behavioral data using these faces. In the first task, 241 online participants classified each of the faces with the following format: 
+
 <img src='/images/face_dataset/face_classification.png' width="50%">
 
 These behavioral ratings provide a population-level estimate of perceived racial and gender characteristics of the faces, rather than relying on idiosyncratic manual judgements. They also offer continuous responses (response percentages) to quantify these characteristics in a non-binarized or non-categorized fashion.
@@ -64,9 +66,9 @@ These behavioral ratings provide a population-level estimate of perceived racial
 ### 2. Perception-memory task
 I have also collected a sample of 135 online participants performing a 2-part task, involving a 3-way concurrent discrimination (oddity) task and a subsequent alternative-forced choice recognition memory test for faces from the oddity task. In both tasks, the two faces present on each trial were paired using the classification task data. The oddity trials also include a second angle view of one of the faces. I collected accuracy and response times for 40 trials of visual discrimination (oddity) and 40 trials of AFC recognition (on previously-seen oddities and unseen foils). On a subset of memory trials, the oddity image was rotated from its studied viewpoint.
 
-<img src='/images/face_dataset/face_memorytask.png' width="75%">
+<img src='/images/face_dataset/face_memorytask.png' width="90%">
 
-<img src='/images/face_dataset/face_memorytask2.png' width="75%">
+<img src='/images/face_dataset/face_memorytask2.png' width="90%">
 
 All of these data are available upon email request.
 
