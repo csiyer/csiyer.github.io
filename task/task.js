@@ -27,7 +27,7 @@ if (subject_id == undefined) {
     params.iteration = 'testing'
 }
 console.log('Iteration: ', params.iteration)
-const filename = `${iteration}_${experiment_id}.csv`
+const filename = `${params.iteration}_${experiment_id}.csv`
 
 /*
     1. Initial checks
