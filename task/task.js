@@ -4,7 +4,6 @@
 /*********/ 
 var jsPsych = initJsPsych();
 
-
 /* Save experimental info */
 const experiment_id = jsPsych.randomization.randomID(20) // random subject ID of length 20
 const date = + new Date()
@@ -14,7 +13,6 @@ const subject_id = jsPsych.data.getURLVariable('PROLIFIC_PID');
 const study_id = jsPsych.data.getURLVariable('STUDY_ID');
 const session_id = jsPsych.data.getURLVariable('SESSION_ID');
 console.log('Prolific info:', subject_id, study_id, session_id)
-const filename = `${experiment_id}_${study_id}_${subject_id}_${session_id}.csv`
 
 jsPsych.data.addProperties({
     experiment_id: experiment_id, //unique ID
@@ -29,6 +27,7 @@ if (subject_id == undefined) {
     params.iteration = 'testing'
 }
 console.log('Iteration: ', params.iteration)
+const filename = `${iteration}_${experiment_id}.csv`
 
 /*
     1. Initial checks
@@ -783,12 +782,12 @@ if (params.local) {
     timeline.push(local_alert)
 }
 timeline.push(
-    browser_check, 
-    preload_images, 
-    welcome_fullscreen, 
-    instructions,
-    //comprehension_check,
-    practice_procedure,
+    // browser_check, 
+    // preload_images, 
+    // welcome_fullscreen, 
+    // instructions,
+    // // comprehension_check,
+    // practice_procedure,
     post_practice,
     main_task_procedure,
     debrief_block,
