@@ -1,1 +1,25 @@
-Hello world
+<!DOCTYPE html>
+<html>
+<head>
+  <!-- generic jspych plugins etc. used in experiment --> 
+  <script src="jspsych/jspsych.js"></script>
+  <script src="jspsych/plugin-preload.js"></script>
+  <script src="jspsych/plugin-browser-check.js"></script>
+  <script src="jspsych/plugin-instructions.js"></script>
+  <script src="jspsych/plugin-html-keyboard-response.js"></script>
+  <script src="jspsych/plugin-html-button-response.js"></script>
+  <script src="jspsych/plugin-survey-text.js"></script>
+  <script src="jspsych/plugin-survey-multi-choice.js"></script>
+  <script src="jspsych/plugin-fullscreen.js"></script>
+  <script src="jspsych/plugin-pipe.js"></script>
+  <link rel="stylesheet" href="jspsych/jspsych.css"></link>
+
+  <!-- server compatibility 
+  <script type="text/javascript" src="../socket.io/socket.io.js"></script>  -->
+
+  <!-- custom plugins, functions, and parameters --> 
+  <script src="params.js"></script>
+  <script src="functions.js"></script>
+  <script src="task.js"></script>
+</head>
+</html>
