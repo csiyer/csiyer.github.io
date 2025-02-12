@@ -260,6 +260,7 @@ var post_practice = {
         trial_number = 0
         block_number = 0
         trials_since_reversal = 0
+        old_trial_tracking = reset_old_trial_tracking()
         outcomes = generate_outcomes() // new outcomes
         reversals = generate_block_reversals() // set new reversals
         [deck_locs.blue, deck_locs.orange] = [deck_locs.orange, deck_locs.blue] // reverse deck locations
@@ -296,17 +297,22 @@ for (var i = 1; i <= 665; i++) {
 var old_object_nums_already_repeated = []
 
 // keep track of data for the purpose of creating old trials
-var old_trial_tracking = []
-for (var i = 0; i < params.n_trials_total; i++) {
-    old_trial_tracking[i] = {
-        'trial_number': NaN,
-        'object': 'none',
-        'value': NaN,
-        'deck': 'none',
-        'luck': 'none',
-        'shown_twice': false,
-    };
+
+function reset_old_trial_tracking() {
+    var old_trial_tracking = []
+    for (var i = 0; i < params.n_trials_total; i++) {
+        old_trial_tracking[i] = {
+            'trial_number': NaN,
+            'object': 'none',
+            'value': NaN,
+            'deck': 'none',
+            'luck': 'none',
+            'shown_twice': false,
+        };
+    }
+    return old_trial_tracking
 }
+var old_trial_tracking = reset_old_trial_tracking()
 
 // keep track of average outcomes to keep values from inflating
 var all_outcomes = []
@@ -330,7 +336,6 @@ var choice = {
     response_ends_trial: true,
     on_start: function (choice) {
         // all of this is stored in temp_data and then reloaded in the on_finish because accessing choice.data doesn't work
-        trial_number += 1;
         temp_data.trial_type = 'choice';
         temp_data.trial_number = trial_number;
         temp_data.block_number = block_number;
@@ -361,7 +366,6 @@ var choice = {
             temp_data.reversal_trial = 1
             // regenerate outcomes for the upcoming reversal period
             outcomes = generate_outcomes()
-            console.log('Reversal!')
         }
         temp_data.trials_since_reversal = trials_since_reversal
         trials_since_reversal += 1
@@ -449,7 +453,6 @@ var choice = {
                     temp_data.blue_object = new_object
                     temp_data.blue_value = outcomes[deck_lucks['blue']].shift()
                 }
-                console.log('Found old trial!')
             } else {
                 // failed to find old object, treat as a new/new trial -- this should be rare!!!!
                 console.log('Failed to find old object, trial ' + trial_number)
@@ -559,7 +562,10 @@ var choice = {
         } else {
             old_trial_tracking[trial_number]['luck'] = "unlucky";
         }
+        // update trial number
+        trial_number += 1;
     }
+
 };
 
 
@@ -692,7 +698,7 @@ var debrief_block = {
         
         var feedback_trials = jsPsych.data.get().filter({ trial_type: 'feedback' });
         bonus = feedback_trials.select('outcome').sum() * params.bonus_downweighting, 2
-        bonus = max(bonus, params.max_bonus).toFixed(2)
+        bonus = Math.max(bonus, params.max_bonus).toFixed(2)
 
         var choice_trials = jsPsych.data.get().filter({ trial_type: 'choice' });
         var choice_trials_old = choice_trials.filter({old_trial: 1})
@@ -784,12 +790,12 @@ if (params.local) {
     timeline.push(local_alert)
 }
 timeline.push(
-    // browser_check, 
-    // preload_images, 
-    // welcome_fullscreen, 
-    // instructions,
-    // // comprehension_check,
-    // practice_procedure,
+    browser_check, 
+    preload_images, 
+    welcome_fullscreen, 
+    instructions,
+    // comprehension_check,
+    practice_procedure,
     post_practice,
     main_task_procedure,
     debrief_block,
