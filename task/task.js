@@ -4,6 +4,7 @@
 /*********/ 
 var jsPsych = initJsPsych();
 
+
 /* Save experimental info */
 const experiment_id = jsPsych.randomization.randomID(20) // random subject ID of length 20
 const date = + new Date()
@@ -296,7 +297,7 @@ var old_object_nums_already_repeated = []
 
 // keep track of data for the purpose of creating old trials
 var old_trial_tracking = []
-for (var i = 1; i <= params.n_trials_total; i++) {
+for (var i = 0; i < params.n_trials_total; i++) {
     old_trial_tracking[i] = {
         'trial_number': NaN,
         'object': 'none',
@@ -360,6 +361,7 @@ var choice = {
             temp_data.reversal_trial = 1
             // regenerate outcomes for the upcoming reversal period
             outcomes = generate_outcomes()
+            console.log('Reversal!')
         }
         temp_data.trials_since_reversal = trials_since_reversal
         trials_since_reversal += 1
@@ -447,7 +449,7 @@ var choice = {
                     temp_data.blue_object = new_object
                     temp_data.blue_value = outcomes[deck_lucks['blue']].shift()
                 }
-
+                console.log('Found old trial!')
             } else {
                 // failed to find old object, treat as a new/new trial -- this should be rare!!!!
                 console.log('Failed to find old object, trial ' + trial_number)

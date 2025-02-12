@@ -47,7 +47,8 @@ params.n_trials_total = params.n_blocks * params.n_trials_per_block // 320
 
 params.total_completion_time = 20 // minutes
 
-if (params.local) { // testing mode
-    params.n_blocks = 1
-    params.n_trials_per_block = 5
-}
+// if (params.local) { // testing mode
+//     params.choice_time = 10
+//     params.feedback_time = 10
+//     params.iti = 5
+// }
