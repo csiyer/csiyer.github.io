@@ -9,6 +9,7 @@ var jsPsych = initJsPsych();
 const experiment_id = jsPsych.randomization.randomID(20) // random subject ID of length 20
 const date = + new Date()
 console.log('Experiment ID: ', experiment_id)
+console.log('NEW!')
 
 const subject_id = jsPsych.data.getURLVariable('PROLIFIC_PID');
 const study_id = jsPsych.data.getURLVariable('STUDY_ID');
