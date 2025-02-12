@@ -550,7 +550,10 @@ var choice = {
         } else {
             data.deck_chosen = 'no_response'
         }
-
+        console.log(trial_number)
+        if (trial_number > old_trial_tracking.length-1) {
+            console.log('!!!!!!!!!')
+        }
         // update the old_trial_tracking variables
         old_trial_tracking[trial_number]['trial_number'] = data.trial_number;
         old_trial_tracking[trial_number]['value'] = data.outcome;
