@@ -9,7 +9,6 @@ var jsPsych = initJsPsych();
 const experiment_id = jsPsych.randomization.randomID(20) // random subject ID of length 20
 const date = + new Date()
 console.log('Experiment ID: ', experiment_id)
-console.log('NEW2!')
 
 const subject_id = jsPsych.data.getURLVariable('PROLIFIC_PID');
 const study_id = jsPsych.data.getURLVariable('STUDY_ID');
@@ -551,10 +550,7 @@ var choice = {
         } else {
             data.deck_chosen = 'no_response'
         }
-        console.log(trial_number)
-        if (trial_number > old_trial_tracking.length-1) {
-            console.log('!!!!!!!!!')
-        }
+
         // update the old_trial_tracking variables
         old_trial_tracking[trial_number]['trial_number'] = data.trial_number;
         old_trial_tracking[trial_number]['value'] = data.outcome;
@@ -702,7 +698,7 @@ var debrief_block = {
         
         var feedback_trials = jsPsych.data.get().filter({ trial_type: 'feedback' });
         bonus = feedback_trials.select('outcome').sum() * params.bonus_downweighting, 2
-        bonus = Math.max(bonus, params.max_bonus).toFixed(2)
+        bonus = Math.min(bonus, params.max_bonus).toFixed(2)
 
         var choice_trials = jsPsych.data.get().filter({ trial_type: 'choice' });
         var choice_trials_old = choice_trials.filter({old_trial: 1})
