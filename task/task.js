@@ -654,7 +654,12 @@ var feedback = {
     },
     choices: [],
     trial_duration: params.feedback_time,
-    data: { trial_type: 'feedback' }
+    data: function () {
+        return {
+            trial_type: 'feedback',
+            outcome: jsPsych.data.get().last(2).values()[0].outcome
+        }
+    }
 };
 
 var block_break = {
