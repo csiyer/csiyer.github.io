@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -142,16 +143,27 @@
         }
 
         @keyframes move {
-            from { transform: translate(-20%, -20%); }
-            to { transform: translate(20%, 20%); }
+            from {
+                transform: translate(-20%, -20%);
+            }
+
+            to {
+                transform: translate(20%, 20%);
+            }
         }
 
         @media (max-width: 640px) {
-            h1 { font-size: 2.25rem; }
-            .grid { grid-template-columns: 1fr; }
+            h1 {
+                font-size: 2.25rem;
+            }
+
+            .grid {
+                grid-template-columns: 1fr;
+            }
         }
     </style>
 </head>
+
 <body>
     <div class="blur-bg">
         <div class="blob"></div>
@@ -160,27 +172,27 @@
 
     <div class="container">
         <h1>Cognitive Task Demos</h1>
-        <p class="subtitle">Experience classic psychological experiments directly in your browser.</p>
-        
+        <p class="subtitle">4 classic psychological experiments</p>
+
         <div class="grid">
             <a href="flanker.html" class="card">
                 <div class="icon">🎯</div>
                 <h2>Flanker Task</h2>
                 <p>Respond to the center arrow while ignoring flanking distractors. Measures executive control.</p>
             </a>
-            
+
             <a href="nback.html" class="card">
                 <div class="icon">🧠</div>
                 <h2>N-back Task</h2>
                 <p>Monitor a sequence of letters and detect repetitions. A gold standard for working memory.</p>
             </a>
-            
+
             <a href="srtt.html" class="card">
                 <div class="icon">⚡</div>
                 <h2>SRTT</h2>
                 <p>Respond to stimulus locations. Uncover implicit pattern learning through reaction times.</p>
             </a>
-            
+
             <a href="paired_associate.html" class="card">
                 <div class="icon">🖼️</div>
                 <h2>Paired Associate</h2>
@@ -189,4 +201,5 @@
         </div>
     </div>
 </body>
+
 </html>
