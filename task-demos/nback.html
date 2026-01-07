@@ -120,6 +120,7 @@
             return {
                 stimulus: `<div class="nback-stim">${letter}</div>`,
                 data: {
+                    task: 'nback',
                     letter: letter,
                     trial_index: index,
                     is_target: index >= n && letter === sequence[index - n]
