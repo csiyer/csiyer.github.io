@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Paired Associate Task</title>
+    <script src="https://unpkg.com/jspsych@7.3.3"></script>
+    <script src="https://unpkg.com/@jspsych/plugin-html-keyboard-response@1.1.2"></script>
+    <script src="https://unpkg.com/@jspsych/plugin-image-keyboard-response@1.1.2"></script>
+    <script src="https://unpkg.com/@jspsych/plugin-survey-text@1.1.2"></script>
+    <script src="https://unpkg.com/@jspsych/plugin-preload@1.1.2"></script>
+    <script src="https://unpkg.com/@jspsych-contrib/plugin-pipe"></script>
+    <link href="https://unpkg.com/jspsych@7.3.3/css/jspsych.css" rel="stylesheet" type="text/css" />
+    <style>
+        body {
+            background-color: #f8fafc;
+            color: #1e293b;
+        }
+
+        .study-img {
+            width: 300px;
+            height: 300px;
+            object-fit: contain;
+            margin-bottom: 20px;
+        }
+
+        .study-word {
+            font-size: 40px;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+
+        .btn-download {
+            background-color: #6366f1;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+
+<body>
+    <script>
+        const jsPsych = initJsPsych({
+            on_finish: function () {
+                document.body.innerHTML = '<div style="text-align:center; margin-top: 20%;">' +
+                    '<h1>Task Complete!</h1>' +
+                    '<p>Your results have been saved.</p>' +
+                    '<button class="btn-download" onclick="location.reload()">Restart Task</button>' +
+                    '<br><br><a href="index.html" style="color:#6366f1;">Back to Menu</a>' +
+                    '</div>';
+            }
+        });
+
+        const subject_id = jsPsych.randomization.randomID(10);
+        const filename = `${subject_id}.csv`;
+        jsPsych.data.addProperties({ subject_id: subject_id });
+
+        const name_entry = {
+            type: jsPsychSurveyText,
+            questions: [{ prompt: "Please enter your name:", name: 'participant_name', required: true }],
+            on_finish: function (data) {
+                jsPsych.data.addProperties({ participant_name: data.response.participant_name });
+            }
+        };
+
+        // Configuration
+        const n_pairs = 10;
+        const study_duration = 3000;
+        const fixation_duration = 500;
+
+        async function initTask() {
+            // Load and parse all words from the stimuli file
+            const response = await fetch('stimuli/words.txt');
+            const wordText = await response.text();
+            const all_words = wordText.split('\n')
+                .map(w => w.trim())
+                .filter(w => w.length > 0);
+
+            const all_images = Array.from({ length: 60 }, (_, i) => `stimuli/objects/${i}.jpg`);
+
+            const selected_images = jsPsych.randomization.sampleWithoutReplacement(all_images, n_pairs);
+            const selected_words = jsPsych.randomization.sampleWithoutReplacement(all_words, n_pairs);
+
+            const pairs = selected_images.map((img, i) => ({
+                image: img,
+                word: selected_words[i],
+                test_html: `<img src="${img}" style="width:300px; height:300px; object-fit:contain; margin-bottom:20px;">`
+            }));
+
+            const preload = {
+                type: jsPsychPreload,
+                images: selected_images
+            };
+
+            const welcome = {
+                type: jsPsychHtmlKeyboardResponse,
+                stimulus: `
+                    <div style="text-align:left;">
+                    <h1>Paired Associate Memory Task</h1>
+                    <p><strong>STUDY PHASE</strong>: You will see images paired with words. Try to remember them.</p>
+                    <p><strong>TEST PHASE</strong>: You will see the image and must type the word it was paired with.</p>
+                    <p>Press any key to start the Study Phase.</p>
+                    </div>
+                `
+            };
+
+            const fixation = {
+                type: jsPsychHtmlKeyboardResponse,
+                stimulus: '<div style="font-size: 60px;">+</div>',
+                choices: "NO_KEYS",
+                trial_duration: fixation_duration,
+            };
+
+            const study_trials = pairs.map(pair => ({
+                stimulus: `
+                    <div style="text-align:center;">
+                        <img src="${pair.image}" class="study-img"><br>
+                        <div class="study-word">${pair.word}</div>
+                    </div>
+                `,
+                data: { phase: 'study', image: pair.image, word: pair.word }
+            }));
+
+            const study_procedure = {
+                timeline: [fixation, {
+                    type: jsPsychHtmlKeyboardResponse,
+                    stimulus: jsPsych.timelineVariable('stimulus'),
+                    choices: "NO_KEYS",
+                    trial_duration: study_duration,
+                    data: jsPsych.timelineVariable('data')
+                }],
+                timeline_variables: study_trials,
+                randomize_order: true
+            };
+
+            const transition = {
+                type: jsPsychHtmlKeyboardResponse,
+                stimulus: `
+                    <div style="text-align:center;">
+                    <h1>Test Phase</h1>
+                    <p>You will see the images. Type the corresponding word and press Enter.</p>
+                    <p>Press any key to begin.</p>
+                    </div>
+                `
+            };
+
+            const test_procedure = {
+                timeline: [fixation, {
+                    type: jsPsychSurveyText,
+                    questions: [
+                        {
+                            prompt: jsPsych.timelineVariable('test_html'),
+                            placeholder: 'Type word here...',
+                            required: false,
+                            name: 'response'
+                        }
+                    ],
+                    data: {
+                        phase: 'test',
+                        image: jsPsych.timelineVariable('image'),
+                        correct_word: jsPsych.timelineVariable('word')
+                    },
+                    on_finish: function (data) {
+                        const response = data.response.response.trim().toUpperCase();
+                        data.correct = response === data.correct_word;
+                        data.rt = data.rt / 1000;
+                    }
+                }],
+                timeline_variables: pairs,
+                randomize_order: true
+            };
+
+            const save_data = {
+                type: jsPsychPipe,
+                action: "save",
+                experiment_id: "BDDlRWtE7PfR",
+                filename: filename,
+                data_string: () => jsPsych.data.get().csv()
+            };
+
+            jsPsych.run([name_entry, preload, welcome, study_procedure, transition, test_procedure, save_data]);
+        }
+
+        initTask();
+    </script>
+</body>
+
+</html>

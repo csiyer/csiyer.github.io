@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>N-back Task</title>
+    <script src="https://unpkg.com/jspsych@7.3.3"></script>
+    <script src="https://unpkg.com/@jspsych/plugin-html-keyboard-response@1.1.2"></script>
+    <script src="https://unpkg.com/@jspsych/plugin-survey-html-form@1.0.2"></script>
+    <script src="https://unpkg.com/@jspsych/plugin-survey-text@1.1.2"></script>
+    <script src="https://unpkg.com/@jspsych-contrib/plugin-pipe"></script>
+    <link href="https://unpkg.com/jspsych@7.3.3/css/jspsych.css" rel="stylesheet" type="text/css" />
+    <style>
+        body {
+            background-color: #f8fafc;
+            color: #1e293b;
+        }
+
+        .nback-stim {
+            font-size: 80px;
+            font-weight: bold;
+        }
+
+        .btn-download {
+            background-color: #6366f1;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+
+<body>
+    <script>
+        const jsPsych = initJsPsych({
+            on_finish: function () {
+                document.body.innerHTML = '<div style="text-align:center; margin-top: 20%;">' +
+                    '<h1>Task Complete!</h1>' +
+                    '<p>Your results have been saved.</p>' +
+                    '<button class="btn-download" onclick="location.reload()">Restart Task</button>' +
+                    '<br><br><a href="index.html" style="color:#6366f1;">Back to Menu</a>' +
+                    '</div>';
+            }
+        });
+
+        const subject_id = jsPsych.randomization.randomID(10);
+        const filename = `${subject_id}.csv`;
+        jsPsych.data.addProperties({ subject_id: subject_id });
+
+        const name_entry = {
+            type: jsPsychSurveyText,
+            questions: [{ prompt: "Please enter your name:", name: 'participant_name', required: true }],
+            on_finish: function (data) {
+                jsPsych.data.addProperties({ participant_name: data.response.participant_name });
+            }
+        };
+
+        let n = 1;
+        const letters = ['B', 'C', 'D', 'F', 'G', 'H', 'J', 'K'];
+
+        const setup = {
+            type: jsPsychSurveyHtmlForm,
+            html: `
+                <div style="text-align:left;">
+                <h2>N-back Task Setup</h2>
+                <p>Select the level of N:</p>
+                <div style="margin: 20px 0;">
+                    <label><input type="radio" name="n_val" value="1" checked> 1-back</label><br>
+                    <label><input type="radio" name="n_val" value="2"> 2-back</label><br>
+                    <label><input type="radio" name="n_val" value="3"> 3-back</label>
+                </div>
+                </div>
+            `,
+            button_label: 'Continue',
+            on_finish: function (data) {
+                n = parseInt(data.response.n_val);
+                jsPsych.data.addProperties({ n: n });
+            }
+        };
+
+        const instructions = {
+            type: jsPsychHtmlKeyboardResponse,
+            stimulus: function () {
+                return `
+                    <div style="text-align:left;">
+                    <h1>Instructions (${n}-back)</h1>
+                    <p>You will see a series of letters.</p>
+                    <p>Press <strong>SPACE</strong> whenever the current letter matches the one shown <strong>${n}</strong> position(s) ago.</p>
+                    <p>Otherwise, press nothing.</p>
+                    <p>Press any key to start.</p>
+                    </div>
+                `;
+            }
+        };
+
+        const fixation = {
+            type: jsPsychHtmlKeyboardResponse,
+            stimulus: '<div style="font-size: 60px;">+</div>',
+            choices: "NO_KEYS",
+            trial_duration: 500,
+        };
+
+        // Sequence generation (approx 30 trials)
+        let sequence = [];
+        for (let i = 0; i < 30; i++) {
+            if (i >= n && Math.random() < 0.3) {
+                sequence.push(sequence[i - n]);
+            } else {
+                let available = letters.filter(l => i < n || l !== sequence[i - n]);
+                sequence.push(jsPsych.randomization.sampleWithReplacement(available, 1)[0]);
+            }
+        }
+
+        const trials = sequence.map((letter, index) => {
+            return {
+                stimulus: `<div class="nback-stim">${letter}</div>`,
+                data: {
+                    letter: letter,
+                    trial_index: index,
+                    is_target: index >= n && letter === sequence[index - n]
+                }
+            };
+        });
+
+        const test = {
+            type: jsPsychHtmlKeyboardResponse,
+            stimulus: jsPsych.timelineVariable('stimulus'),
+            choices: [' '],
+            trial_duration: 1000,
+            response_ends_trial: false,
+            data: jsPsych.timelineVariable('data'),
+            on_finish: function (data) {
+                data.response_pressed = data.response === ' ';
+                data.correct = data.response_pressed === data.is_target;
+                data.rt = data.rt ? data.rt / 1000 : null;
+            }
+        };
+
+        const test_procedure = {
+            timeline: [fixation, test],
+            timeline_variables: trials,
+            randomize_order: false
+        };
+
+        const save_data = {
+            type: jsPsychPipe,
+            action: "save",
+            experiment_id: "BDDlRWtE7PfR",
+            filename: filename,
+            data_string: () => jsPsych.data.get().csv()
+        };
+
+        jsPsych.run([name_entry, setup, instructions, test_procedure, save_data]);
+    </script>
+</body>
+
+</html>

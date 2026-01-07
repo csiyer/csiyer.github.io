@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SRTT</title>
+    <script src="https://unpkg.com/jspsych@7.3.3"></script>
+    <script src="https://unpkg.com/@jspsych/plugin-html-keyboard-response@1.1.2"></script>
+    <script src="https://unpkg.com/@jspsych/plugin-survey-text@1.1.2"></script>
+    <script src="https://unpkg.com/@jspsych-contrib/plugin-pipe"></script>
+    <link href="https://unpkg.com/jspsych@7.3.3/css/jspsych.css" rel="stylesheet" type="text/css" />
+    <style>
+        body {
+            background-color: #f8fafc;
+            color: #1e293b;
+        }
+
+        .srtt-container {
+            display: flex;
+            gap: 20px;
+            justify-content: center;
+            align-items: center;
+            margin-top: 50px;
+        }
+
+        .box {
+            width: 100px;
+            height: 100px;
+            border: 3px solid #1e293b;
+            border-radius: 8px;
+        }
+
+        .box.highlight {
+            background-color: #3b82f6;
+        }
+
+        .btn-download {
+            background-color: #6366f1;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+
+<body>
+    <script>
+        const jsPsych = initJsPsych({
+            on_finish: function () {
+                document.body.innerHTML = '<div style="text-align:center; margin-top: 20%;">' +
+                    '<h1>Task Complete!</h1>' +
+                    '<p>Your results have been saved.</p>' +
+                    '<button class="btn-download" onclick="location.reload()">Restart Task</button>' +
+                    '<br><br><a href="index.html" style="color:#6366f1;">Back to Menu</a>' +
+                    '</div>';
+            }
+        });
+
+        const subject_id = jsPsych.randomization.randomID(10);
+        const filename = `${subject_id}.csv`;
+        jsPsych.data.addProperties({ subject_id: subject_id });
+
+        const name_entry = {
+            type: jsPsychSurveyText,
+            questions: [{ prompt: "Please enter your name:", name: 'participant_name', required: true }],
+            on_finish: function (data) {
+                jsPsych.data.addProperties({ participant_name: data.response.participant_name });
+            }
+        };
+
+        const welcome = {
+            type: jsPsychHtmlKeyboardResponse,
+            stimulus: `
+                <div style="text-align:left;">
+                <h1>Serial Reaction Time Task</h1>
+                <p>Place your first 2 fingers from each hand on the <strong>F, G, H, and J</strong> keys.</p>
+                <p>Press the key corresponding to the blue box that appears (Left to Right).</p>
+                <p>Press any key to start.</p>
+                </div>
+            `
+        };
+
+        const pattern = [0, 2, 1, 3, 2, 0, 0, 3];
+        const n_reps = 8;
+        const n_random = 16;
+
+        let sequence = [];
+        for (let i = 0; i < n_reps; i++) {
+            sequence = sequence.concat(pattern.map(idx => ({ pos: idx, type: 'pattern' })));
+        }
+        for (let i = 0; i < n_random; i++) {
+            sequence.push({ pos: Math.floor(Math.random() * 4), type: 'random' });
+        }
+
+        const keys = ['f', 'g', 'h', 'j'];
+
+        const create_stim = (pos) => {
+            let boxes = ['', '', '', ''].map((_, i) => `<div class="box ${i === pos ? 'highlight' : ''}"></div>`);
+            return `<div class="srtt-container">${boxes.join('')}</div>`;
+        };
+
+        const trials = sequence.map((trial, index) => {
+            return {
+                stimulus: create_stim(trial.pos),
+                data: {
+                    target_pos: trial.pos,
+                    trial_type: trial.type,
+                    trial_index: index,
+                    correct_response: keys[trial.pos]
+                }
+            };
+        });
+
+        const test = {
+            type: jsPsychHtmlKeyboardResponse,
+            stimulus: jsPsych.timelineVariable('stimulus'),
+            choices: ['f', 'g', 'h', 'j', 'escape'],
+            data: jsPsych.timelineVariable('data'),
+            on_finish: function (data) {
+                if (data.response === 'escape') { jsPsych.endExperiment('Task aborted via Escape.'); }
+                data.correct = data.response === data.correct_response;
+                data.rt = data.rt / 1000;
+            }
+        };
+
+        const iti = {
+            type: jsPsychHtmlKeyboardResponse,
+            stimulus: create_stim(-1), // Clear highlight
+            choices: "NO_KEYS",
+            trial_duration: 200,
+        };
+
+        const test_procedure = {
+            timeline: [test, iti],
+            timeline_variables: trials,
+            randomize_order: false
+        };
+
+        const save_data = {
+            type: jsPsychPipe,
+            action: "save",
+            experiment_id: "BDDlRWtE7PfR",
+            filename: filename,
+            data_string: () => jsPsych.data.get().csv()
+        };
+
+        jsPsych.run([name_entry, welcome, test_procedure, save_data]);
+    </script>
+</body>
+
+</html>

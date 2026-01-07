@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Flanker Task</title>
+    <script src="https://unpkg.com/jspsych@7.3.3"></script>
+    <script src="https://unpkg.com/@jspsych/plugin-html-keyboard-response@1.1.2"></script>
+    <script src="https://unpkg.com/@jspsych/plugin-survey-text@1.1.2"></script>
+    <script src="https://unpkg.com/@jspsych/plugin-preload@1.1.2"></script>
+    <script src="https://unpkg.com/@jspsych-contrib/plugin-pipe"></script>
+    <link href="https://unpkg.com/jspsych@7.3.3/css/jspsych.css" rel="stylesheet" type="text/css" />
+    <style>
+        body {
+            background-color: #f8fafc;
+            color: #1e293b;
+        }
+
+        .jspsych-content {
+            max-width: 800px;
+        }
+
+        .flanker-stim {
+            font-size: 80px;
+            font-family: monospace;
+            font-weight: bold;
+        }
+
+        .btn-download {
+            background-color: #6366f1;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            margin-top: 20px;
+        }
+
+        .btn-download:hover {
+            background-color: #4f46e5;
+        }
+    </style>
+</head>
+
+<body>
+    <script>
+        const jsPsych = initJsPsych({
+            on_finish: function () {
+                document.body.innerHTML = '<div style="text-align:center; margin-top: 20%;">' +
+                    '<h1>Task Complete!</h1>' +
+                    '<p>Your results have been saved.</p>' +
+                    '<button class="btn-download" onclick="location.reload()">Restart Task</button>' +
+                    '<br><br><a href="index.html" style="color:#6366f1;">Back to Menu</a>' +
+                    '</div>';
+            }
+        });
+
+        const subject_id = jsPsych.randomization.randomID(10);
+        const filename = `${subject_id}.csv`;
+        jsPsych.data.addProperties({ subject_id: subject_id });
+
+        const name_entry = {
+            type: jsPsychSurveyText,
+            questions: [{ prompt: "Please enter your name:", name: 'participant_name', required: true }],
+            on_finish: function (data) {
+                jsPsych.data.addProperties({ participant_name: data.response.participant_name });
+            }
+        };
+
+        const welcome = {
+            type: jsPsychHtmlKeyboardResponse,
+            stimulus: `
+                <div style="text-align:left;">
+                <h1>Flanker Task</h1>
+                <p>Use the <strong>LEFT</strong> and <strong>RIGHT</strong> arrow keys to indicate the direction of the <strong>CENTER</strong> arrow.</p>
+                <p>Example: if you see <<><< press <strong>RIGHT</strong></p>
+                <p>Press any key to start.</p>
+                </div>
+            `
+        };
+
+        const fixation = {
+            type: jsPsychHtmlKeyboardResponse,
+            stimulus: '<div style="font-size: 60px;">+</div>',
+            choices: "NO_KEYS",
+            trial_duration: 500,
+        };
+
+        const stimuli = [
+            { text: '<<<<<', type: 'congruent', correct_response: 'arrowleft' },
+            { text: '>>>>>', type: 'congruent', correct_response: 'arrowright' },
+            { text: '<<><<', type: 'incongruent', correct_response: 'arrowright' },
+            { text: '>><>>', type: 'incongruent', correct_response: 'arrowleft' }
+        ].map(s => {
+            s.html = `<div class="flanker-stim">${s.text}</div>`;
+            return s;
+        });
+
+        const trials = jsPsych.randomization.repeat(stimuli, 8); // 32 trials total (matches PsychoPy closely)
+
+        const test = {
+            type: jsPsychHtmlKeyboardResponse,
+            stimulus: jsPsych.timelineVariable('html'),
+            choices: ['arrowleft', 'arrowright'],
+            data: {
+                task: 'flanker',
+                type: jsPsych.timelineVariable('type'),
+                correct_response: jsPsych.timelineVariable('correct_response')
+            },
+            on_finish: function (data) {
+                data.correct = jsPsych.pluginAPI.compareKeys(data.response, data.correct_response);
+                data.rt = data.rt / 1000; // Convert to seconds for consistency
+            }
+        };
+
+        const feedback = {
+            type: jsPsychHtmlKeyboardResponse,
+            stimulus: function () {
+                const last_trial = jsPsych.data.get().last(1).values()[0];
+                if (last_trial.correct) {
+                    return '<p style="color:green; font-size:30px;">Correct!</p>';
+                } else {
+                    return '<p style="color:red; font-size:30px;">Incorrect</p>';
+                }
+            },
+            choices: "NO_KEYS",
+            trial_duration: 300
+        };
+
+        const test_procedure = {
+            timeline: [fixation, test, feedback],
+            timeline_variables: stimuli,
+            randomize_order: true,
+            repetitions: 8
+        };
+
+        const save_data = {
+            type: jsPsychPipe,
+            action: "save",
+            experiment_id: "BDDlRWtE7PfR",
+            filename: filename,
+            data_string: () => jsPsych.data.get().csv()
+        };
+
+        jsPsych.run([name_entry, welcome, test_procedure, save_data]);
+    </script>
+</body>
+
+</html>
