@@ -180,12 +180,33 @@
             const save_data = {
                 type: jsPsychPipe,
                 action: "save",
-                experiment_id: "BDDlRWtE7PfR",
+                experiment_id: "Vsevdw4ov0ct",
                 filename: filename,
                 data_string: () => jsPsych.data.get().csv()
             };
 
-            jsPsych.run([name_entry, preload, welcome, study_procedure, transition, test_procedure, save_data]);
+            const summary_screen = {
+                type: jsPsychHtmlKeyboardResponse,
+                stimulus: function () {
+                    const test_trials = jsPsych.data.get().filter({ phase: 'test', task: 'paired_associate' });
+                    const accuracy = test_trials.count() > 0 ? test_trials.filter({ correct: true }).count() / test_trials.count() * 100 : 0;
+                    const rt_values = test_trials.select('rt').values.filter(v => v !== null);
+                    const mean_rt = rt_values.length > 0 ? rt_values.reduce((a, b) => a + b, 0) / rt_values.length : 0;
+
+                    return `
+                        <div style="text-align:left; font-size: 20px; line-height: 1.6;">
+                            <h1>Task Summary</h1>
+                            <p><strong>Accuracy:</strong> ${accuracy.toFixed(1)}%</p>
+                            <p><strong>Mean Response Time:</strong> ${mean_rt.toFixed(3)} s</p>
+                            <br>
+                            <p>Press <strong>SPACE</strong> to finish the experiment.</p>
+                        </div>
+                    `;
+                },
+                choices: [' ']
+            };
+
+            jsPsych.run([name_entry, preload, welcome, study_procedure, transition, test_procedure, save_data, summary_screen]);
         }
 
         initTask();

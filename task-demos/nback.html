@@ -151,12 +151,33 @@
         const save_data = {
             type: jsPsychPipe,
             action: "save",
-            experiment_id: "BDDlRWtE7PfR",
+            experiment_id: "Vsevdw4ov0ct",
             filename: filename,
             data_string: () => jsPsych.data.get().csv()
         };
 
-        jsPsych.run([name_entry, setup, instructions, test_procedure, save_data]);
+        const summary_screen = {
+            type: jsPsychHtmlKeyboardResponse,
+            stimulus: function () {
+                const trials = jsPsych.data.get().filter({ task: 'nback' });
+                const accuracy = trials.filter({ correct: true }).count() / trials.count() * 100;
+                const rt_trials = trials.filter({ response_pressed: true });
+                const mean_rt = rt_trials.select('rt').mean();
+
+                return `
+                    <div style="text-align:left; font-size: 20px; line-height: 1.6;">
+                        <h1>Task Summary</h1>
+                        <p><strong>Accuracy:</strong> ${accuracy.toFixed(1)}%</p>
+                        <p><strong>Mean Response Time:</strong> ${mean_rt ? mean_rt.toFixed(3) + ' s' : 'N/A'}</p>
+                        <br>
+                        <p>Press <strong>SPACE</strong> to finish the experiment.</p>
+                    </div>
+                `;
+            },
+            choices: [' ']
+        };
+
+        jsPsych.run([name_entry, setup, instructions, test_procedure, save_data, summary_screen]);
     </script>
 </body>
 

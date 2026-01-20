@@ -139,12 +139,44 @@
         const save_data = {
             type: jsPsychPipe,
             action: "save",
-            experiment_id: "BDDlRWtE7PfR",
+            experiment_id: "Vsevdw4ov0ct",
             filename: filename,
             data_string: () => jsPsych.data.get().csv()
         };
 
-        jsPsych.run([name_entry, welcome, test_procedure, save_data]);
+        const summary_screen = {
+            type: jsPsychHtmlKeyboardResponse,
+            stimulus: function () {
+                const congruent_trials = jsPsych.data.get().filter({ type: 'congruent', task: 'flanker' });
+                const incongruent_trials = jsPsych.data.get().filter({ type: 'incongruent', task: 'flanker' });
+
+                const mean_rt_congruent = congruent_trials.select('rt').mean();
+                const mean_rt_incongruent = incongruent_trials.select('rt').mean();
+                const accuracy_congruent = congruent_trials.filter({ correct: true }).count() / congruent_trials.count() * 100;
+                const accuracy_incongruent = incongruent_trials.filter({ correct: true }).count() / incongruent_trials.count() * 100;
+
+                return `
+                    <div style="text-align:left; font-size: 20px; line-height: 1.6;">
+                        <h1>Task Summary</h1>
+                        <p><strong>Congruent trials:</strong></p>
+                        <ul>
+                            <li>Mean RT: ${mean_rt_congruent.toFixed(3)} s</li>
+                            <li>Accuracy: ${accuracy_congruent.toFixed(1)}%</li>
+                        </ul>
+                        <p><strong>Incongruent trials:</strong></p>
+                        <ul>
+                            <li>Mean RT: ${mean_rt_incongruent.toFixed(3)} s</li>
+                            <li>Accuracy: ${accuracy_incongruent.toFixed(1)}%</li>
+                        </ul>
+                        <br>
+                        <p>Press <strong>SPACE</strong> to finish the experiment.</p>
+                    </div>
+                `;
+            },
+            choices: [' ']
+        };
+
+        jsPsych.run([name_entry, welcome, test_procedure, save_data, summary_screen]);
     </script>
 </body>
 

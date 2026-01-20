@@ -107,13 +107,10 @@
         const trials = sequence.map((trial, index) => {
             return {
                 stimulus: create_stim(trial.pos),
-                data: {
-                    task: 'srtt',
-                    target_pos: trial.pos,
-                    trial_type: trial.type,
-                    trial_index: index,
-                    correct_response: keys[trial.pos]
-                }
+                task: 'srtt',
+                target_pos: trial.pos,
+                block_type: trial.type,
+                correct_response: keys[trial.pos]
             };
         });
 
@@ -121,7 +118,12 @@
             type: jsPsychHtmlKeyboardResponse,
             stimulus: jsPsych.timelineVariable('stimulus'),
             choices: ['f', 'g', 'h', 'j', 'escape'],
-            data: jsPsych.timelineVariable('data'),
+            data: {
+                task: jsPsych.timelineVariable('task'),
+                target_pos: jsPsych.timelineVariable('target_pos'),
+                block_type: jsPsych.timelineVariable('block_type'),
+                correct_response: jsPsych.timelineVariable('correct_response')
+            },
             on_finish: function (data) {
                 if (data.response === 'escape') { jsPsych.endExperiment('Task aborted via Escape.'); }
                 data.correct = data.response === data.correct_response;
@@ -145,12 +147,35 @@
         const save_data = {
             type: jsPsychPipe,
             action: "save",
-            experiment_id: "BDDlRWtE7PfR",
+            experiment_id: "Vsevdw4ov0ct",
             filename: filename,
             data_string: () => jsPsych.data.get().csv()
         };
 
-        jsPsych.run([name_entry, welcome, test_procedure, save_data]);
+        const summary_screen = {
+            type: jsPsychHtmlKeyboardResponse,
+            stimulus: function () {
+                const srtt_data = jsPsych.data.get().filter({ task: 'srtt' });
+                const pattern_trials = srtt_data.filter({ block_type: 'pattern' });
+                const random_trials = srtt_data.filter({ block_type: 'random' });
+
+                const mean_rt_last_pattern = pattern_trials.last(16).select('rt').mean();
+                const mean_rt_random = random_trials.select('rt').mean();
+
+                return `
+                    <div style="text-align:left; font-size: 20px; line-height: 1.6;">
+                        <h1>Task Summary</h1>
+                        <p><strong>Mean Response Time (last pattern block):</strong> ${mean_rt_last_pattern ? mean_rt_last_pattern.toFixed(3) : '0.000'} s</p>
+                        <p><strong>Mean Response Time (final random block):</strong> ${mean_rt_random ? mean_rt_random.toFixed(3) : '0.000'} s</p>
+                        <br>
+                        <p>Press <strong>SPACE</strong> to finish the experiment.</p>
+                    </div>
+                `;
+            },
+            choices: [' ']
+        };
+
+        jsPsych.run([name_entry, welcome, test_procedure, save_data, summary_screen]);
     </script>
 </body>
 
