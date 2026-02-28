@@ -1,9 +1,10 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>HCP fMRI Demo | Home</title>
+    <title>N-Back fMRI Analysis | HCP</title>
     <style>
         :root {
             --primary: #6366f1;
@@ -37,17 +38,12 @@
         h1 {
             font-size: 3rem;
             font-weight: 800;
-            margin-bottom: 0.5rem;
+            margin-bottom: 3rem;
             background: linear-gradient(to right, #818cf8, #c084fc);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             letter-spacing: -0.025em;
-        }
-
-        p.subtitle {
-            font-size: 1.25rem;
-            color: var(--text-muted);
-            margin-bottom: 3rem;
+            line-height: 1.2;
         }
 
         .grid {
@@ -60,17 +56,18 @@
             background-color: var(--card-bg);
             border: 1px solid rgba(255, 255, 255, 0.1);
             border-radius: 1rem;
-            padding: 1.5rem;
+            padding: 2rem;
             text-decoration: none;
             color: inherit;
             transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
             display: flex;
             flex-direction: column;
-            align-items: flex-start;
-            gap: 0.75rem;
+            align-items: center;
+            justify-content: center;
             position: relative;
             overflow: hidden;
-            text-align: left;
+            text-align: center;
+            min-height: 100px;
         }
 
         .card:hover {
@@ -84,24 +81,6 @@
             margin: 0;
             font-size: 1.25rem;
             font-weight: 700;
-        }
-
-        .card p {
-            margin: 0;
-            color: var(--text-muted);
-            font-size: 0.9rem;
-            line-height: 1.5;
-        }
-
-        .tag {
-            font-size: 0.7rem;
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-            background: rgba(99, 102, 241, 0.25);
-            color: #a5b4fc;
-            padding: 2px 8px;
-            border-radius: 4px;
-            font-weight: 600;
         }
 
         .blur-bg {
@@ -132,11 +111,17 @@
         }
 
         @keyframes move {
-            from { transform: translate(-20%, -20%); }
-            to { transform: translate(20%, 20%); }
+            from {
+                transform: translate(-20%, -20%);
+            }
+
+            to {
+                transform: translate(20%, 20%);
+            }
         }
     </style>
 </head>
+
 <body>
     <div class="blur-bg">
         <div class="blob"></div>
@@ -144,52 +129,38 @@
     </div>
 
     <div class="container">
-        <h1>Human Connectome Project (HCP)</h1>
-        <p class="subtitle">Interactive fMRI Processing & Analysis Demos</p>
+        <h1>N-Back fMRI Analysis <br> (Human Connectome Project)</h1>
 
         <div class="grid">
             <a href="struct_proc.html" class="card">
-                <span class="tag">Structural</span>
                 <h2>Structural Preprocessing</h2>
-                <p>Toggle between unprocessed and preprocessed T1-weighted images.</p>
             </a>
 
             <a href="struct_comp.html" class="card">
-                <span class="tag">Structural</span>
                 <h2>Structural Comparison</h2>
-                <p>Overlay T1 images from two different subjects to see anatomical variability.</p>
             </a>
 
             <a href="func_proc.html" class="card">
-                <span class="tag">Functional</span>
                 <h2>Functional Preprocessing</h2>
-                <p>Compare raw BOLD timeseries against processed, clean signals.</p>
             </a>
 
             <a href="sub_contrast.html" class="card">
-                <span class="tag">Subject Level</span>
-                <h2>Subject-Level Contrast</h2>
-                <p>Explore 2-back and 0-back contrasts in individual subjects.</p>
+                <h2>Subject: 2bk vs 0bk</h2>
             </a>
 
             <a href="group_2bk.html" class="card">
-                <span class="tag">Group Level</span>
                 <h2>Group: 2bk vs 0bk</h2>
-                <p>Visualize the default mode and working memory networks across the group.</p>
             </a>
 
             <a href="group_face.html" class="card">
-                <span class="tag">Group Level</span>
                 <h2>Group: Face Selective</h2>
-                <p>Identify the Fusiform Face Area (FFA) with high-res group contrasts and masks.</p>
             </a>
 
             <a href="group_place.html" class="card">
-                <span class="tag">Group Level</span>
                 <h2>Group: Place Selective</h2>
-                <p>Pinpoint the Parahippocampal Place Area (PPA) across the study cohort.</p>
             </a>
         </div>
     </div>
 </body>
+
 </html>
