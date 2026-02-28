@@ -58,24 +58,20 @@
     </style>
     <script>
         var params1 = [];
-        params1["images"] = [
-            "data/mni152.nii.gz",
-            "data/sub1_2bk_beta.nii.gz",
-            "data/sub1_0bk_beta.nii.gz"
-        ];
-        params1["sub1_2bk_beta.nii.gz"] = { "min": 0, "max": 0.5, "lut": "Red Overlay", "name": "Sub1 2-Back" };
-        params1["sub1_0bk_beta.nii.gz"] = { "min": 0, "max": 0.5, "lut": "Green Overlay", "name": "Sub1 0-Back" };
+        params1["images"] = ["data/sub1_2bk_beta.nii.gz"];
+        params1["lut"] = "Grayscale";
 
         var params2 = [];
-        params2["images"] = [
-            "data/mni152.nii.gz",
-            "data/sub1_2bk-0bk_beta.nii.gz",
-            "data/sub2_2bk-0bk_beta.nii.gz"
-        ];
-        params2["sub1_2bk-0bk_beta.nii.gz"] = { "min": 0, "max": 0.5, "lut": "Red Overlay", "name": "Sub1 (2bk-0bk)" };
-        params2["sub2_2bk-0bk_beta.nii.gz"] = { "min": 0, "max": 0.5, "lut": "Green Overlay", "name": "Sub2 (2bk-0bk)" };
-        params1["coordinate"] = [0, 0, 0];
-        params2["coordinate"] = [0, 0, 0];
+        params2["images"] = ["data/sub1_0bk_beta.nii.gz"];
+        params2["lut"] = "Grayscale";
+
+        var params3 = [];
+        params3["images"] = ["data/sub1_2bk-0bk_beta.nii.gz"];
+        params3["lut"] = "Grayscale";
+
+        var params4 = [];
+        params4["images"] = ["data/sub2_2bk-0bk_beta.nii.gz"];
+        params4["lut"] = "Grayscale";
     </script>
 </head>
 
@@ -85,11 +81,17 @@
         <h1>Subject-Level Contrast: 2back vs 0back</h1>
     </div>
 
-    <div class="viewer-label">Top: 2bk and 0bk Activations</div>
+    <div class="viewer-label">Subject 1: 2-Back Activation</div>
     <div class="papaya" data-params="params1"></div>
 
-    <div class="viewer-label">Bottom: 2bk-0bk Contrast (Subjects 1 &amp; 2)</div>
+    <div class="viewer-label">Subject 1: 0-Back Activation</div>
     <div class="papaya" data-params="params2"></div>
+
+    <div class="viewer-label">Subject 1: 2bk − 0bk Contrast</div>
+    <div class="papaya" data-params="params3"></div>
+
+    <div class="viewer-label">Subject 2: 2bk − 0bk Contrast</div>
+    <div class="papaya" data-params="params4"></div>
 </body>
 
 </html>

@@ -44,15 +44,24 @@
         .back-btn:hover {
             opacity: 0.8;
         }
+
+        .viewer-label {
+            max-width: 1000px;
+            margin: 20px auto 8px auto;
+            text-align: left;
+            font-weight: 700;
+            color: #a5b4fc;
+            text-transform: uppercase;
+            font-size: 0.8rem;
+            letter-spacing: 0.05em;
+        }
     </style>
     <script>
-        var params = [];
-        params["images"] = [
-            "data/sub1_t1_clean.nii.gz",
-            "data/sub2_t1_clean.nii.gz"
-        ];
-        params["sub1_t1_clean.nii.gz"] = { "name": "Subject 1 T1" };
-        params["sub2_t1_clean.nii.gz"] = { "name": "Subject 2 T1" };
+        var params1 = [];
+        params1["images"] = ["data/sub1_t1_clean.nii.gz"];
+
+        var params2 = [];
+        params2["images"] = ["data/sub2_t1_clean.nii.gz"];
     </script>
 </head>
 
@@ -62,7 +71,11 @@
         <h1>Structural Comparison</h1>
     </div>
 
-    <div class="papaya" data-params="params"></div>
+    <div class="viewer-label">Top: Subject 1</div>
+    <div class="papaya" data-params="params1"></div>
+
+    <div class="viewer-label">Bottom: Subject 2</div>
+    <div class="papaya" data-params="params2"></div>
 </body>
 
 </html>

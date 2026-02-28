@@ -44,15 +44,24 @@
         .back-btn:hover {
             opacity: 0.8;
         }
+
+        .viewer-label {
+            max-width: 1000px;
+            margin: 20px auto 8px auto;
+            text-align: left;
+            font-weight: 700;
+            color: #a5b4fc;
+            text-transform: uppercase;
+            font-size: 0.8rem;
+            letter-spacing: 0.05em;
+        }
     </style>
     <script>
-        var params = [];
-        params["images"] = [
-            "data/sub1_bold_raw.nii.gz",
-            "data/sub1_bold_clean.nii.gz"
-        ];
-        params["sub1_bold_raw.nii.gz"] = { "name": "Raw BOLD (10 vol)" };
-        params["sub1_bold_clean.nii.gz"] = { "name": "Clean BOLD (10 vol)" };
+        var params1 = [];
+        params1["images"] = ["data/sub1_bold_raw.nii.gz"];
+
+        var params2 = [];
+        params2["images"] = ["data/sub1_bold_clean.nii.gz"];
     </script>
 </head>
 
@@ -62,7 +71,11 @@
         <h1>Functional Preprocessing</h1>
     </div>
 
-    <div class="papaya" data-params="params"></div>
+    <div class="viewer-label">Top: Raw BOLD</div>
+    <div class="papaya" data-params="params1"></div>
+
+    <div class="viewer-label">Bottom: Preprocessed BOLD</div>
+    <div class="papaya" data-params="params2"></div>
 </body>
 
 </html>

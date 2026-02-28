@@ -44,46 +44,21 @@
         .back-btn:hover {
             opacity: 0.8;
         }
-
-        .viewer-label {
-            max-width: 1000px;
-            margin: 20px auto 8px auto;
-            text-align: left;
-            font-weight: 700;
-            color: #a5b4fc;
-            text-transform: uppercase;
-            font-size: 0.8rem;
-            letter-spacing: 0.05em;
-        }
     </style>
     <script>
-        var params1 = [];
-        params1["images"] = [
-            "data/mni152.nii.gz",
-            "data/group_2bk-0bk_zstat.nii.gz"
-        ];
-        params1["group_2bk-0bk_zstat.nii.gz"] = { "min": 3.1, "max": 21, "lut": "Hot", "name": "Raw Z-Map (Group)" };
-
-        var params2 = [];
-        params2["images"] = [
-            "data/mni152.nii.gz",
-            "data/group_2bk-0bk_top1pct_mask.nii.gz"
-        ];
-        params2["group_2bk-0bk_top1pct_mask.nii.gz"] = { "min": 0, "max": 1, "lut": "Blue Overlay", "name": "Top 1% Voxels" };
+        var params = [];
+        params["images"] = ["data/group_2bk-0bk_zstat.nii.gz"];
+        params["lut"] = "Grayscale";
     </script>
 </head>
 
 <body>
     <div class="header">
         <a href="index.html" class="back-btn">← Back to Overview</a>
-        <h1>Group-Level Contrast: 2back-0back</h1>
+        <h1>Group-Level Contrast: 2back − 0back</h1>
     </div>
 
-    <div class="viewer-label">Top: Raw Z-Statistic Map</div>
-    <div class="papaya" data-params="params1"></div>
-
-    <div class="viewer-label">Bottom: Statistical Thresholding (Top 1% of Responding Voxels)</div>
-    <div class="papaya" data-params="params2"></div>
+    <div class="papaya" data-params="params"></div>
 </body>
 
 </html>
