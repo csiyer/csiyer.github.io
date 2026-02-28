@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Structural Preprocessing | HCP Demo</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/papaya-viewer@1.0.1449/release/main/debug/papaya.css">
+    <script src="https://cdn.jsdelivr.net/npm/papaya-viewer@1.0.1449/release/main/debug/papaya.js"></script>
+    <style>
+        :root {
+            --primary: #6366f1;
+            --bg: #0f172a;
+            --card-bg: #1e293b;
+            --text: #f8fafc;
+            --text-muted: #94a3b8;
+        }
+
+        body {
+            font-family: 'Inter', system-ui, sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        .header {
+            max-width: 1000px;
+            width: 100%;
+            margin-bottom: 20px;
+            text-align: left;
+        }
+
+        .header h1 {
+            margin: 0;
+            font-size: 2rem;
+            background: linear-gradient(to right, #818cf8, #c084fc);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .header p {
+            color: var(--text-muted);
+            margin: 5px 0 0 0;
+        }
+
+        .viewer-container {
+            width: 1000px;
+            height: 600px;
+            background: #000;
+            border-radius: 12px;
+            overflow: hidden;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            margin-bottom: 20px;
+        }
+
+        .back-btn {
+            display: inline-block;
+            margin-top: 20px;
+            color: var(--primary);
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 0.9rem;
+            transition: transform 0.2s;
+        }
+
+        .back-btn:hover {
+            transform: translateX(-5px);
+        }
+
+        .description-box {
+            max-width: 1000px;
+            width: 100%;
+            background: var(--card-bg);
+            padding: 20px;
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .description-box h3 {
+            margin-top: 0;
+            font-size: 1.1rem;
+        }
+
+        .description-box p {
+            font-size: 0.95rem;
+            line-height: 1.6;
+            color: var(--text-muted);
+            margin-bottom: 0;
+        }
+    </style>
+    <script>
+        var params = [];
+        params["images"] = [
+            "data/sub1_t1_raw.nii.gz",
+            "data/sub1_t1_clean.nii.gz"
+        ];
+        // Set labels
+        params["sub1_t1_raw.nii.gz"] = { "name": "Unprocessed" };
+        params["sub1_t1_clean.nii.gz"] = { "name": "Preprocessed" };
+    </script>
+</head>
+
+<body>
+    <div class="header">
+        <a href="index.html" class="back-btn">← Back to Overview</a>
+        <h1>Structural Preprocessing</h1>
+        <p>Comparison of raw vs. Bias-Field Corrected T1w images</p>
+    </div>
+
+    <div class="viewer-container">
+        <div class="papaya" data-params="params"></div>
+    </div>
+
+    <div class="description-box">
+        <h3>Processing Details</h3>
+        <p>This comparison demonstrates the effect of typical HCP-style structural preprocessing. The "Preprocessed"
+            version has undergone bias-field correction (N4 or similar) to remove signal intensity inhomogeneities,
+            which is critical for accurate brain extraction and tissue segmentation.</p>
+    </div>
+</body>
+
+</html>

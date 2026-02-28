@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Group Contrast: 2back-0back | HCP Demo</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/papaya-viewer@1.0.1449/release/main/debug/papaya.css">
+    <script src="https://cdn.jsdelivr.net/npm/papaya-viewer@1.0.1449/release/main/debug/papaya.js"></script>
+    <style>
+        :root {
+            --primary: #6366f1;
+            --bg: #0f172a;
+            --card-bg: #1e293b;
+            --text: #f8fafc;
+            --text-muted: #94a3b8;
+        }
+
+        body {
+            font-family: 'Inter', system-ui, sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        .header {
+            max-width: 1000px;
+            width: 100%;
+            margin-bottom: 20px;
+            text-align: left;
+        }
+
+        .header h1 {
+            margin: 0;
+            font-size: 2rem;
+            background: linear-gradient(to right, #818cf8, #c084fc);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .header p {
+            color: var(--text-muted);
+            margin: 5px 0 0 0;
+        }
+
+        .viewer-container {
+            width: 1000px;
+            height: 500px;
+            background: #000;
+            border-radius: 12px;
+            overflow: hidden;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            margin-bottom: 30px;
+        }
+
+        .back-btn {
+            display: inline-block;
+            margin-top: 20px;
+            color: var(--primary);
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 0.9rem;
+            transition: transform 0.2s;
+        }
+
+        .back-btn:hover {
+            transform: translateX(-5px);
+        }
+
+        .viewer-label {
+            width: 1000px;
+            text-align: left;
+            margin-bottom: 8px;
+            font-weight: 700;
+            color: #a5b4fc;
+            text-transform: uppercase;
+            font-size: 0.8rem;
+            letter-spacing: 0.05em;
+        }
+    </style>
+    <script>
+        var params1 = [];
+        params1["images"] = [
+            "data/mni152.nii.gz",
+            "data/group_2bk-0bk_zstat.nii.gz"
+        ];
+        params1["group_2bk-0bk_zstat.nii.gz"] = { "min": 3.1, "max": 21, "lut": "Hot", "name": "Raw Z-Map (Group)" };
+
+        var params2 = [];
+        params2["images"] = [
+            "data/mni152.nii.gz",
+            "data/group_2bk-0bk_top1pct_mask.nii.gz"
+        ];
+        params2["group_2bk-0bk_top1pct_mask.nii.gz"] = { "min": 0, "max": 1, "lut": "Electric Blue", "name": "Top 1% Functional Blocks" };
+    </script>
+</head>
+
+<body>
+    <div class="header">
+        <a href="index.html" class="back-btn">← Back to Overview</a>
+        <h1>Group-Level Contrast: 2back-0back</h1>
+        <p>Working memory network localized in the studie study cohort</p>
+    </div>
+
+    <div class="viewer-label">Top: Raw Z-Statistic Map (Thresholded Z > 3.1)</div>
+    <div class="viewer-container">
+        <div class="papaya" data-params="params1"></div>
+    </div>
+
+    <div class="viewer-label">Bottom: Statistical Thresholding (Top 1% of Responding Voxels)</div>
+    <div class="viewer-container">
+        <div class="papaya" data-params="params2"></div>
+    </div>
+</body>
+
+</html>

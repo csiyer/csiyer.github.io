@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Functional Preprocessing | HCP Demo</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/papaya-viewer@1.0.1449/release/main/debug/papaya.css">
+    <script src="https://cdn.jsdelivr.net/npm/papaya-viewer@1.0.1449/release/main/debug/papaya.js"></script>
+    <style>
+        :root {
+            --primary: #6366f1;
+            --bg: #0f172a;
+            --card-bg: #1e293b;
+            --text: #f8fafc;
+            --text-muted: #94a3b8;
+        }
+
+        body {
+            font-family: 'Inter', system-ui, sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        .header {
+            max-width: 1000px;
+            width: 100%;
+            margin-bottom: 20px;
+            text-align: left;
+        }
+
+        .header h1 {
+            margin: 0;
+            font-size: 2rem;
+            background: linear-gradient(to right, #818cf8, #c084fc);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .header p {
+            color: var(--text-muted);
+            margin: 5px 0 0 0;
+        }
+
+        .viewer-container {
+            width: 1000px;
+            height: 600px;
+            background: #000;
+            border-radius: 12px;
+            overflow: hidden;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            margin-bottom: 20px;
+        }
+
+        .back-btn {
+            display: inline-block;
+            margin-top: 20px;
+            color: var(--primary);
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 0.9rem;
+            transition: transform 0.2s;
+        }
+
+        .back-btn:hover {
+            transform: translateX(-5px);
+        }
+
+        .description-box {
+            max-width: 1000px;
+            width: 100%;
+            background: var(--card-bg);
+            padding: 20px;
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .description-box h3 {
+            margin-top: 0;
+            font-size: 1.1rem;
+        }
+
+        .description-box p {
+            font-size: 0.95rem;
+            line-height: 1.6;
+            color: var(--text-muted);
+            margin-bottom: 0;
+        }
+    </style>
+    <script>
+        var params = [];
+        params["images"] = [
+            "data/sub1_bold_raw.nii.gz",
+            "data/sub1_bold_clean.nii.gz"
+        ];
+        // Labels for 4D files
+        params["sub1_bold_raw.nii.gz"] = { "name": "Raw BOLD (10 vol)" };
+        params["sub1_bold_clean.nii.gz"] = { "name": "Clean BOLD (10 vol)" };
+    </script>
+</head>
+
+<body>
+    <div class="header">
+        <a href="index.html" class="back-btn">← Back to Overview</a>
+        <h1>Functional Preprocessing</h1>
+        <p>Comparison of raw vs. HCP-preprocessed BOLD fMRI signals</p>
+    </div>
+
+    <div class="viewer-container">
+        <div class="papaya" data-params="params"></div>
+    </div>
+
+    <div class="description-box">
+        <h3>BOLD Data Cleaning</h3>
+        <p>This demo uses a short snippet (10 volumes) of the working memory task BOLD data. The preprocessed version
+            has undergone motion correction, geometric distortion correction (FDC/GDC), and high-pass temporal filtering
+            to remove drift. You can scroll through time using the Papaya controls to observe the variability in signal
+            intensity and the quality of the spatial registration.</p>
+    </div>
+</body>
+
+</html>
