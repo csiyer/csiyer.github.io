@@ -60,7 +60,7 @@
         var params1 = [];
         params1["worldSpace"] = true;
         params1["images"] = ["data/mni152.nii.gz", "data/group_place-avg_zstat.nii.gz"];
-        params1["group_place-avg_zstat.nii.gz"] = { "lut": "Grayscale", "alpha": 0.6 };
+        params1["group_place-avg_zstat.nii.gz"] = { "lut": "Grayscale", "min": -20, "max": 20, "alpha": 0.6 };
 
         var params2 = [];
         params2["worldSpace"] = true;
@@ -69,7 +69,7 @@
             "data/group_place-avg_zstat.nii.gz",
             "data/mask_ppa_bilateral.nii.gz"
         ];
-        params2["group_place-avg_zstat.nii.gz"] = { "lut": "Red Overlay", "alpha": 0.7 };
+        params2["group_place-avg_zstat.nii.gz"] = { "lut": "Red Overlay", "alpha": 0.7, "min": -20, "max": 20 };
         params2["mask_ppa_bilateral.nii.gz"] = { "min": 0.5, "max": 1, "lut": "Blue Overlay", "alpha": 1 };
     </script>
 </head>
