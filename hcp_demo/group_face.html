@@ -60,15 +60,17 @@
         var params1 = [];
         params1["images"] = ["data/group_face-avg_zstat.nii.gz"];
         params1["lut"] = "Grayscale";
+        params1["worldSpace"] = true;
 
         var params2 = [];
+        params2["worldSpace"] = true;
         params2["images"] = [
             "data/mni152.nii.gz",
             "data/group_face-avg_zstat.nii.gz",
             "data/mask_ffa_bilateral.nii.gz"
         ];
         params2["group_face-avg_zstat.nii.gz"] = { "lut": "Red Overlay", "alpha": 0.7 };
-        params2["mask_ffa_bilateral.nii.gz"] = { "min": 0, "max": 1, "lut": "Blue Overlay", "alpha": 0.7 };
+        params2["mask_ffa_bilateral.nii.gz"] = { "min": 0.5, "max": 1, "lut": "Blue Overlay", "alpha": 1 };
     </script>
 </head>
 
