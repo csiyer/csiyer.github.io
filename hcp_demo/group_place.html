@@ -58,9 +58,9 @@
     </style>
     <script>
         var params1 = [];
-        params1["images"] = ["data/group_place-avg_zstat.nii.gz"];
-        params1["lut"] = "Grayscale";
         params1["worldSpace"] = true;
+        params1["images"] = ["data/mni152.nii.gz", "data/group_place-avg_zstat.nii.gz"];
+        params1["group_place-avg_zstat.nii.gz"] = { "lut": "Grayscale" };
 
         var params2 = [];
         params2["worldSpace"] = true;

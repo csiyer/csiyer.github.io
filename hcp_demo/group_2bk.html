@@ -47,8 +47,9 @@
     </style>
     <script>
         var params = [];
-        params["images"] = ["data/group_2bk-0bk_zstat.nii.gz"];
-        params["lut"] = "Grayscale";
+        params["worldSpace"] = true;
+        params["images"] = ["data/mni152.nii.gz", "data/group_2bk-0bk_zstat.nii.gz"];
+        params["group_2bk-0bk_zstat.nii.gz"] = { "lut": "Grayscale" };
     </script>
 </head>
 
