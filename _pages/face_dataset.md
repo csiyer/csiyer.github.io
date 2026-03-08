@@ -52,4 +52,4 @@ Finally, I produced grayscale and luminance-matched images across 15 angles (5x3
     <img src='/images/face_dataset/face_memorytask2.png' width="90%">
 </p>
 
-All data are available upon email request.
+All data are available via email request.
