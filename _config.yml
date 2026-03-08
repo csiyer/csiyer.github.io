@@ -207,20 +207,17 @@ kramdown:
   enable_coderay: false
 
 
-# These settings control the types of collections used by the template
+# Collections settings intentionally left empty to hide placeholder pages
+# You can restore these as you add your own content in _publications, _talks, etc.
 collections:
   teaching:
-    output: true
-    permalink: /:collection/:path/
+    output: false
   publications:
-    output: true
-    permalink: /:collection/:path/
+    output: false
   portfolio:
-    output: true
-    permalink: /:collection/:path/
+    output: false
   talks:
-    output: true
-    permalink: /:collection/:path/
+    output: false
 
 
 # These settings control how pages and collections are included in the site
