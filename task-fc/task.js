@@ -169,6 +169,10 @@ export async function initTask(jsPsych, subject_id) {
                     rotatedCache[`${stim.path}_${stim.hue}`] = canvas.toDataURL();
                     resolve();
                 };
+                img.onerror = () => {
+                    console.error(`Failed to load image: ${stim.path}`);
+                    resolve(); // Resolve anyway to avoid hanging Promise.all
+                };
                 img.src = stim.path;
             });
         });
@@ -353,7 +357,7 @@ export async function initTask(jsPsych, subject_id) {
         action: "save",
         experiment_id: params.data_pipe_id,
         filename: `${subject_id}.csv`,
-        data: () => jsPsych.data.get().csv(),
+        data_string: () => jsPsych.data.get().csv(),
         wait_message: "Saving data..."
     });
 
@@ -450,6 +454,9 @@ function renderColorTest(canvas, target, jsPsych, isAttention = false, currentHu
             offCtx.putImageData(imgData, 0, 0);
             const size = canvas.width / 3;
             ctx.drawImage(offCanvas, cx - size / 2, cy - size / 2, size, size);
+        };
+        img.onerror = () => {
+            console.error(`Failed to load image during test: ${target.path}`);
         };
         img.src = target.path;
     } else if (isAttention) {
