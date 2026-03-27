@@ -10,13 +10,10 @@ async function initTask(jsPsych, subject_id) {
     const taskStimuli = jsPsych.randomization.shuffle(allStimuliPaths.slice(1));
 
     // Capture Prolific metadata
-    const pid = jsPsych.data.getURLVariable('PROLIFIC_PID') || 'unknown';
-    const study_id = jsPsych.data.getURLVariable('STUDY_ID') || 'unknown';
-    const session_id = jsPsych.data.getURLVariable('SESSION_ID') || 'unknown';
     jsPsych.data.addProperties({
-        prolific_id: pid,
-        study_id: study_id,
-        session_id: session_id,
+        prolific_id: jsPsych.data.getURLVariable('PROLIFIC_PID') || 'unknown',
+        study_id: jsPsych.data.getURLVariable('STUDY_ID') || 'unknown',
+        session_id: jsPsych.data.getURLVariable('SESSION_ID') || 'unknown',
         subject_id: subject_id,
         experiment_id: params.experiment_id,
         experiment_date: new Date().toISOString()
@@ -26,14 +23,13 @@ async function initTask(jsPsych, subject_id) {
     const allUniqueStimuli = [];
     const allSequencePairs = [];
 
-    // Pre-load Cache (Non-blocking)
-    const stimuliCache = {};
+    // --- Initialize Cache and Start Pre-loading ---
+    window.stimCache = {};
     allStimuliPaths.forEach(path => {
         const img = new Image();
-        img.onload = () => { stimuliCache[path] = img; };
+        img.onload = () => { window.stimCache[path] = img; };
         img.src = path;
     });
-    window.stimuliCache = stimuliCache;
 
     // Create Stimuli Objects (A1-A6, B1-B6)
     const anchorPool = jsPsych.randomization.shuffle(
@@ -104,7 +100,7 @@ async function initTask(jsPsych, subject_id) {
                 const canvas = document.getElementById('instruction-canvas');
                 if (canvas && !canvas.dataset.initialized) {
                     canvas.dataset.initialized = "true";
-                    renderColorTest(canvas, { path: instructionStim }, jsPsych);
+                    renderColorTest(canvas, { path: instructionStim });
                     setupColorWheelInteraction(jsPsych, { path: instructionStim }, false, true);
                 }
             });
@@ -220,7 +216,7 @@ async function initTask(jsPsych, subject_id) {
             timeline.push({
                 type: jsPsychCanvasButtonResponse,
                 canvas_size: [450, 450],
-                stimulus: (canvas) => renderColorTest(canvas, target, jsPsych),
+                stimulus: (c) => renderColorTest(c, target),
                 choices: ['Submit'],
                 trial_duration: params.max_report_time,
                 on_load: () => setupColorWheelInteraction(jsPsych, target, false, true, (h) => { lastHue = h; }),
@@ -437,13 +433,14 @@ async function initTask(jsPsych, subject_id) {
 
 // --- UI Helpers ---
 
-function renderColorTest(canvas, target, jsPsych, isAttention = false, currentHue = null) {
+function renderColorTest(canvas, target, currentHue = null) {
     const ctx = canvas.getContext('2d');
     const cx = canvas.width / 2;
     const cy = canvas.height / 2;
     const radius = 200;
     const innerPadding = 60;
 
+    // Clear Canvas
     ctx.fillStyle = params.background_color;
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
@@ -456,12 +453,13 @@ function renderColorTest(canvas, target, jsPsych, isAttention = false, currentHu
         ctx.fill();
     }
 
+    // Inner Circle
     ctx.beginPath();
     ctx.arc(cx, cy, radius - innerPadding, 0, Math.PI * 2);
     ctx.fillStyle = params.background_color;
     ctx.fill();
 
-    // Indicator
+    // Choice Indicator
     if (currentHue !== null) {
         const radAngle = (currentHue) * (Math.PI / 180);
         const indicatorX = cx + (radius - innerPadding / 2) * Math.cos(radAngle);
@@ -469,36 +467,34 @@ function renderColorTest(canvas, target, jsPsych, isAttention = false, currentHu
         ctx.beginPath();
         ctx.arc(indicatorX, indicatorY, innerPadding * 0.3, 0, Math.PI * 2);
         ctx.strokeStyle = "black";
-        ctx.lineWidth = 2;
+        ctx.lineWidth = 3;
         ctx.stroke();
     }
 
-    // Stimulus Drawing
-    if (!isAttention && target.path) {
-        let img = window.stimuliCache[target.path];
-        // If image not in cache yet, load it on the fly
-        if (!img) {
-            img = new Image();
-            img.src = target.path;
-            window.stimuliCache[target.path] = img;
+    // Stimulus (Synchronous from Cache with Fallback)
+    if (target && target.path) {
+        let img = window.stimCache ? window.stimCache[target.path] : null;
+        if (!img || !img.complete) {
+            // Safety fallback if cache is missing or not finished loading
+            if (!img) {
+                img = new Image();
+                img.src = target.path; 
+                if (window.stimCache) window.stimCache[target.path] = img;
+            }
+            // Trigger a re-render as soon as it loads to fix the "gray box" bug
+            img.onload = () => {
+                renderColorTest(canvas, target, currentHue);
+            };
         }
 
         const size = canvas.width / 3;
-        const x = cx - size / 2;
-        const y = cy - size / 2;
-
         ctx.save();
         if (currentHue === null) {
-            // Grayscale using the most robust method: Gray fill with saturation blend
-            ctx.drawImage(img, x, y, size, size);
-            ctx.globalCompositeOperation = 'saturation';
-            ctx.fillStyle = 'gray';
-            ctx.fillRect(x, y, size, size);
+            ctx.filter = 'grayscale(100%)';
         } else {
-            // Hue rotation using CSS Filter if possible, works on Red objects
             ctx.filter = `hue-rotate(${currentHue}deg)`;
-            ctx.drawImage(img, x, y, size, size);
         }
+        ctx.drawImage(img, cx - size / 2, cy - size / 2, size, size);
         ctx.restore();
     }
 }
@@ -515,13 +511,12 @@ function setupColorWheelInteraction(jsPsych, target, isAttention = false, noAdva
         const y = e.clientY - rect.top - cy;
         const radius = Math.sqrt(x * x + y * y);
 
-        // Only trigger if clicking on the wheel
         if (radius < 140 || radius > 200) return;
 
         const angle = Math.atan2(y, x) * (180 / Math.PI);
         const hue = (angle + 360) % 360;
 
-        renderColorTest(canvas, target, jsPsych, isAttention, hue);
+        renderColorTest(canvas, target, hue);
         if (onUpdate) onUpdate(hue);
 
         const stop = () => {
@@ -534,7 +529,7 @@ function setupColorWheelInteraction(jsPsych, target, isAttention = false, noAdva
             const my = me.clientY - mrect.top - cy;
             const mangle = Math.atan2(my, mx) * (180 / Math.PI);
             const mhue = (mangle + 360) % 360;
-            renderColorTest(canvas, target, jsPsych, isAttention, mhue);
+            renderColorTest(canvas, target, mhue);
             if (onUpdate) onUpdate(mhue);
         };
         window.addEventListener('mouseup', stop);
