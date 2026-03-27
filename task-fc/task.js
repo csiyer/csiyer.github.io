@@ -34,6 +34,9 @@ async function initTask(jsPsych, subject_id) {
     await Promise.all(promises);
     window.stimuliCache = stimuliCache;
 
+    const allUniqueStimuli = [];
+    const allSequencePairs = [];
+
     // Create Stimuli Objects (A1-A6, B1-B6)
     const anchorPool = jsPsych.randomization.shuffle(
         Array.from({ length: 6 }, (_, i) => Math.floor(i * (360 / 6)))
