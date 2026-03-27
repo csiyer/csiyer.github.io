@@ -23,15 +23,7 @@ async function initTask(jsPsych, subject_id) {
     const allUniqueStimuli = [];
     const allSequencePairs = [];
 
-    // --- Initialize Cache and Start Pre-loading ---
-    window.stimCache = {};
-    allStimuliPaths.forEach(path => {
-        const img = new Image();
-        img.onload = () => { window.stimCache[path] = img; };
-        img.src = path;
-    });
-
-    // Create Stimuli Objects (A1-A6, B1-B6)
+    // Generate 6 equally-spaced anchors
     const anchorPool = jsPsych.randomization.shuffle(
         Array.from({ length: 6 }, (_, i) => Math.floor(i * (360 / 6)))
     );
@@ -98,10 +90,11 @@ async function initTask(jsPsych, subject_id) {
         on_load: function () {
             instructionObserver = new MutationObserver((mutations) => {
                 const canvas = document.getElementById('instruction-canvas');
-                if (canvas && !canvas.dataset.initialized) {
+                const img = document.getElementById('instruction-img');
+                if (canvas && img && !canvas.dataset.initialized) {
                     canvas.dataset.initialized = "true";
-                    renderColorTest(canvas, { path: instructionStim });
-                    setupColorWheelInteraction(jsPsych, { path: instructionStim }, false, true);
+                    drawColorWheel(canvas);
+                    setupColorWheelInteraction(canvas, img);
                 }
             });
             instructionObserver.observe(document.body, { childList: true, subtree: true });
@@ -214,12 +207,21 @@ async function initTask(jsPsych, subject_id) {
         testStimuli.forEach(target => {
             let lastHue = null;
             timeline.push({
-                type: jsPsychCanvasButtonResponse,
-                canvas_size: [450, 450],
-                stimulus: (c) => renderColorTest(c, target),
+                type: jsPsychHtmlButtonResponse,
+                stimulus: `
+                    <div style="position: relative; width: 450px; height: 450px; margin: 0 auto; display: block;">
+                        <canvas id="test-canvas" width="450" height="450" style="cursor: pointer;"></canvas>
+                        <img id="test-img" src="${target.path}" style="position: absolute; top: 150px; left: 150px; width: 150px; height: 150px; filter: grayscale(100%); pointer-events: none;">
+                    </div>
+                `,
                 choices: ['Submit'],
                 trial_duration: params.max_report_time,
-                on_load: () => setupColorWheelInteraction(jsPsych, target, false, true, (h) => { lastHue = h; }),
+                on_load: () => {
+                    const canvas = document.getElementById('test-canvas');
+                    const img = document.getElementById('test-img');
+                    drawColorWheel(canvas);
+                    setupColorWheelInteraction(canvas, img, (h) => { lastHue = h; });
+                },
                 data: {
                     phase: 'color_test',
                     block: b,
@@ -433,27 +435,25 @@ async function initTask(jsPsych, subject_id) {
 
 // --- UI Helpers ---
 
-function renderColorTest(canvas, target, currentHue = null) {
+function drawColorWheel(canvas, currentHue = null) {
     const ctx = canvas.getContext('2d');
     const cx = canvas.width / 2;
     const cy = canvas.height / 2;
     const radius = 200;
     const innerPadding = 60;
 
-    // Clear Canvas
-    ctx.fillStyle = params.background_color;
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-    // Color Wheel
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    
+    // Draw wheel ring
     for (let i = 0; i < 360; i++) {
         ctx.beginPath();
         ctx.moveTo(cx, cy);
-        ctx.arc(cx, cy, radius, (i * Math.PI) / 180, ((i + 1) * Math.PI) / 180);
+        ctx.arc(cx, cy, radius, (i * Math.PI) / 180, ((i + 1.1) * Math.PI) / 180);
         ctx.fillStyle = `hsl(${i}, 100%, 50%)`;
         ctx.fill();
     }
 
-    // Inner Circle
+    // Mask the middle
     ctx.beginPath();
     ctx.arc(cx, cy, radius - innerPadding, 0, Math.PI * 2);
     ctx.fillStyle = params.background_color;
@@ -461,79 +461,56 @@ function renderColorTest(canvas, target, currentHue = null) {
 
     // Choice Indicator
     if (currentHue !== null) {
-        const radAngle = (currentHue) * (Math.PI / 180);
-        const indicatorX = cx + (radius - innerPadding / 2) * Math.cos(radAngle);
-        const indicatorY = cy + (radius - innerPadding / 2) * Math.sin(radAngle);
+        const radAngle = currentHue * (Math.PI / 180);
+        const iRad = radius - innerPadding / 2;
+        const indicatorX = cx + iRad * Math.cos(radAngle);
+        const indicatorY = cy + iRad * Math.sin(radAngle);
+        
         ctx.beginPath();
         ctx.arc(indicatorX, indicatorY, innerPadding * 0.3, 0, Math.PI * 2);
-        ctx.strokeStyle = "black";
-        ctx.lineWidth = 3;
+        ctx.strokeStyle = "white";
+        ctx.lineWidth = 4;
         ctx.stroke();
-    }
-
-    // Stimulus (Synchronous from Cache with Fallback)
-    if (target && target.path) {
-        let img = window.stimCache ? window.stimCache[target.path] : null;
-        if (!img || !img.complete) {
-            // Safety fallback if cache is missing or not finished loading
-            if (!img) {
-                img = new Image();
-                img.src = target.path; 
-                if (window.stimCache) window.stimCache[target.path] = img;
-            }
-            // Trigger a re-render as soon as it loads to fix the "gray box" bug
-            img.onload = () => {
-                renderColorTest(canvas, target, currentHue);
-            };
-        }
-
-        const size = canvas.width / 3;
-        ctx.save();
-        if (currentHue === null) {
-            ctx.filter = 'grayscale(100%)';
-        } else {
-            ctx.filter = `hue-rotate(${currentHue}deg)`;
-        }
-        ctx.drawImage(img, cx - size / 2, cy - size / 2, size, size);
-        ctx.restore();
+        ctx.strokeStyle = "black";
+        ctx.lineWidth = 2;
+        ctx.stroke();
     }
 }
 
-function setupColorWheelInteraction(jsPsych, target, isAttention = false, noAdvance = false, onUpdate = null) {
-    const canvas = document.querySelector('canvas');
-    if (!canvas) return;
+function setupColorWheelInteraction(canvas, img, onUpdate = null) {
     const cx = canvas.width / 2;
     const cy = canvas.height / 2;
+    let isDragging = false;
 
-    const mouseHandler = (e) => {
+    const handleInput = (e) => {
         const rect = canvas.getBoundingClientRect();
-        const x = e.clientX - rect.left - cx;
-        const y = e.clientY - rect.top - cy;
+        const clientX = e.clientX || (e.touches && e.touches[0].clientX);
+        const clientY = e.clientY || (e.touches && e.touches[0].clientY);
+        
+        const x = clientX - rect.left - cx;
+        const y = clientY - rect.top - cy;
         const radius = Math.sqrt(x * x + y * y);
 
-        if (radius < 140 || radius > 200) return;
+        // Only start drag if clicking on the wheel ring
+        if (!isDragging && (radius < 140 || radius > 200)) return;
 
+        isDragging = true;
         const angle = Math.atan2(y, x) * (180 / Math.PI);
         const hue = (angle + 360) % 360;
 
-        renderColorTest(canvas, target, hue);
+        drawColorWheel(canvas, hue);
+        img.style.filter = `hue-rotate(${hue}deg)`;
         if (onUpdate) onUpdate(hue);
-
-        const stop = () => {
-            window.removeEventListener('mouseup', stop);
-            canvas.removeEventListener('mousemove', moveHandler);
-        };
-        const moveHandler = (me) => {
-            const mrect = canvas.getBoundingClientRect();
-            const mx = me.clientX - mrect.left - cx;
-            const my = me.clientY - mrect.top - cy;
-            const mangle = Math.atan2(my, mx) * (180 / Math.PI);
-            const mhue = (mangle + 360) % 360;
-            renderColorTest(canvas, target, mhue);
-            if (onUpdate) onUpdate(mhue);
-        };
-        window.addEventListener('mouseup', stop);
-        canvas.addEventListener('mousemove', moveHandler);
     };
-    canvas.addEventListener('mousedown', mouseHandler);
+
+    const stop = () => { isDragging = false; };
+
+    canvas.addEventListener('mousedown', (e) => handleInput(e));
+    window.addEventListener('mousemove', (e) => { if (isDragging) handleInput(e); });
+    window.addEventListener('mouseup', stop);
+    
+    // Support touch
+    canvas.addEventListener('touchstart', (e) => { e.preventDefault(); handleInput(e); });
+    window.addEventListener('touchmove', (e) => { if (isDragging) handleInput(e); });
+    window.addEventListener('touchend', stop);
 }

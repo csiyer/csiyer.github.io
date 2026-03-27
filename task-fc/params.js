@@ -45,7 +45,10 @@ params.instruction_pages = [
     `<div id="interactive-demo">
         <p>After some time, you will begin a memory test.</p>
         <p>You will see images from before, in a color wheel. You can click around the color wheel around to change the color of the object. Set the color to match the color of the object as it was shown before.</p>
-        <canvas id="instruction-canvas" width="450" height="450" style="margin: 0 auto; display: block;"></canvas>
+        <div style="position: relative; width: 450px; height: 450px; margin: 0 auto;">
+            <canvas id="instruction-canvas" width="450" height="450" style="display: block;"></canvas>
+            <img id="instruction-img" src="stimuli/obj01.jpg" style="position: absolute; top: 150px; left: 150px; width: 150px; height: 150px; filter: grayscale(100%);">
+        </div>
         <p>Test out the color wheel above before moving on.</p>
     </div>`,
     `<p>Your <strong>bonus</strong> will be calculated based on your performance on the tests.</p>
