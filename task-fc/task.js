@@ -1,264 +1,123 @@
 /**
  * task.js - Core experiment logic for FIFO-Color
+ * Updated to use CSS Filters to avoid CORS/Security errors on local files.
  */
 
-// --- Color Conversion Helpers (RGB <-> CIELAB) ---
-
-function rgbToXyz(r, g, b) {
-    r /= 255; g /= 255; b /= 255;
-    r = r > 0.04045 ? Math.pow((r + 0.055) / 1.055, 2.4) : r / 12.92;
-    g = g > 0.04045 ? Math.pow((g + 0.055) / 1.055, 2.4) : g / 12.92;
-    b = b > 0.04045 ? Math.pow((b + 0.055) / 1.055, 2.4) : b / 12.92;
-    r *= 100; g *= 100; b *= 100;
-    const x = r * 0.4124 + g * 0.3576 + b * 0.1805;
-    const y = r * 0.2126 + g * 0.7152 + b * 0.0722;
-    const z = r * 0.0193 + g * 0.1192 + b * 0.9505;
-    return [x, y, z];
-}
-
-function xyzToLab(x, y, z) {
-    const refX = 95.047; const refY = 100.000; const refZ = 108.883;
-    x /= refX; y /= refY; z /= refZ;
-    x = x > 0.008856 ? Math.pow(x, 1 / 3) : (7.787 * x) + (16 / 116);
-    y = y > 0.008856 ? Math.pow(y, 1 / 3) : (7.787 * y) + (16 / 116);
-    z = z > 0.008856 ? Math.pow(z, 1 / 3) : (7.787 * z) + (16 / 116);
-    const l = (116 * y) - 16;
-    const a = 500 * (x - y);
-    const b_ = 200 * (y - z);
-    return [l, a, b_];
-}
-
-function labToXyz(l, a, b_) {
-    let y = (l + 16) / 116;
-    let x = a / 500 + y;
-    let z = y - b_ / 200;
-    const y3 = Math.pow(y, 3);
-    const x3 = Math.pow(x, 3);
-    const z3 = Math.pow(z, 3);
-    y = y3 > 0.008856 ? y3 : (y - 16 / 116) / 7.787;
-    x = x3 > 0.008856 ? x3 : (x - 16 / 116) / 7.787;
-    z = z3 > 0.008856 ? z3 : (z - 16 / 116) / 7.787;
-    return [x * 95.047, y * 100.000, z * 108.883];
-}
-
-function xyzToRgb(x, y, z) {
-    x /= 100; y /= 100; z /= 100;
-    let r = x * 3.2406 + y * -1.5372 + z * -0.4986;
-    let g = x * -0.9689 + y * 1.8758 + z * 0.0415;
-    let b = x * 0.0557 + y * -0.2040 + z * 1.0570;
-    r = r > 0.0031308 ? 1.055 * (Math.pow(r, 1 / 2.4)) - 0.055 : 12.92 * r;
-    g = g > 0.0031308 ? 1.055 * (Math.pow(g, 1 / 2.4)) - 0.055 : 12.92 * g;
-    b = b > 0.0031308 ? 1.055 * (Math.pow(b, 1 / 2.4)) - 0.055 : 12.92 * b;
-    return [
-        Math.max(0, Math.min(255, r * 255)),
-        Math.max(0, Math.min(255, g * 255)),
-        Math.max(0, Math.min(255, b * 255))
-    ];
-}
-
-function rotateHue(imgData, angle, grayscale = false) {
-    const data = imgData.data;
-    const rad = (angle * Math.PI) / 180;
-    const cos = Math.cos(rad);
-    const sin = Math.sin(rad);
-
-    for (let i = 0; i < data.length; i += 4) {
-        const [x, y, z] = rgbToXyz(data[i], data[i + 1], data[i + 2]);
-        let [l, a, b_] = xyzToLab(x, y, z);
-
-        let a_new, b_new;
-        if (grayscale) {
-            a_new = 0;
-            b_new = 0;
-        } else {
-            a_new = a * cos - b_ * sin;
-            b_new = a * sin + b_ * cos;
-        }
-
-        const [nx, ny, nz] = labToXyz(l, a_new, b_new);
-        const [nr, ng, nb] = xyzToRgb(nx, ny, nz);
-        data[i] = nr;
-        data[i + 1] = ng;
-        data[i + 2] = nb;
-    }
-}
-
-// --- Task Implementation ---
-
-export async function initTask(jsPsych, subject_id) {
+async function initTask(jsPsych, subject_id) {
 
     const allStimuliPaths = Array.from({ length: 36 }, (_, i) => `stimuli/obj${(i + 1).toString().padStart(2, '0')}.jpg`);
     const instructionStim = allStimuliPaths[0];
-    const taskStimuli = allStimuliPaths.slice(1); // Exclude first image from task
+    const taskStimuli = jsPsych.randomization.shuffle(allStimuliPaths.slice(1));
 
-    // Define the sequence structure for a set of 12 stimuli
-    // Roles: A1-A6, B1-B6
-    const totalSetSize = 12;
-    const nSets = params.n_sets;
-    const rolesPerSet = ['A1', 'A2', 'A3', 'A4', 'A5', 'A6', 'B1', 'B2', 'B3', 'B4', 'B5', 'B6'];
-
-    // Generate anchor hulls for all sets
-    // 8 anchor slots per set of 12 stimuli
-    const totalAnchors = nSets * 8;
-    const anchorHues = jsPsych.randomization.shuffle(
-        Array.from({ length: totalAnchors }, (_, i) => i * (params.n_colors / totalAnchors))
-    );
-
-    const experimentalStructure = [];
-    const allUniqueStimuli = [];
-    const allSequenceTransitions = [];
-
-    const dist = params.color_distance_max; // using 20 degrees as set in params
-
-    for (let s = 0; s < nSets; s++) {
-        const setStimuli = taskStimuli.slice(s * totalSetSize, (s + 1) * totalSetSize);
-        const setAnchors = anchorHues.slice(s * 8, (s + 1) * 8);
-
-        const setRoles = {};
-        rolesPerSet.forEach((role, idx) => {
-            setRoles[role] = setStimuli[idx];
-        });
-
-        const struct = {
-            // Similarity Pairs (Anchors 0-3)
-            A1: { path: setRoles.A1, hue: (setAnchors[0] - dist / 2 + params.n_colors) % params.n_colors },
-            A2: { path: setRoles.A2, hue: (setAnchors[0] + dist / 2 + params.n_colors) % params.n_colors },
-            B2: { path: setRoles.B2, hue: (setAnchors[1] - dist / 2 + params.n_colors) % params.n_colors },
-            B3: { path: setRoles.B3, hue: (setAnchors[1] + dist / 2 + params.n_colors) % params.n_colors },
-            A4: { path: setRoles.A4, hue: (setAnchors[2] - dist / 2 + params.n_colors) % params.n_colors },
-            A5: { path: setRoles.A5, hue: (setAnchors[2] + dist / 2 + params.n_colors) % params.n_colors },
-            B4: { path: setRoles.B4, hue: (setAnchors[3] - dist / 2 + params.n_colors) % params.n_colors },
-            B5: { path: setRoles.B5, hue: (setAnchors[3] + dist / 2 + params.n_colors) % params.n_colors },
-            // Individual Anchors (Anchors 4-7)
-            B1: { path: setRoles.B1, hue: setAnchors[4] },
-            A3: { path: setRoles.A3, hue: setAnchors[5] },
-            A6: { path: setRoles.A6, hue: setAnchors[6] },
-            B6: { path: setRoles.B6, hue: setAnchors[7] }
-        };
-
-        experimentalStructure.push(struct);
-        allUniqueStimuli.push(...Object.values(struct));
-
-        // Define the 7 Transitions for this set
-        allSequenceTransitions.push(
-            { stim: struct.A1, next: struct.B1 },
-            { stim: struct.A2, next: struct.B1 },
-            { stim: struct.A3, next: struct.B2 },
-            { stim: struct.A3, next: struct.B3 },
-            { stim: struct.A4, next: struct.B4 },
-            { stim: struct.A5, next: struct.B5 },
-            { stim: struct.A6, next: struct.B6 }
-        );
-    }
-
-    // Helper to rotate and cache images
-    const rotatedCache = {};
-    async function preRotateImages() {
-        const promises = allUniqueStimuli.map(stim => {
-            return new Promise(resolve => {
-                const img = new Image();
-                img.onload = () => {
-                    const canvas = document.createElement('canvas');
-                    canvas.width = img.width;
-                    canvas.height = img.height;
-                    const ctx = canvas.getContext('2d');
-                    ctx.drawImage(img, 0, 0);
-                    const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-                    rotateHue(imgData, stim.hue);
-                    ctx.putImageData(imgData, 0, 0);
-                    rotatedCache[`${stim.path}_${stim.hue}`] = canvas.toDataURL();
-                    resolve();
-                };
-                img.onerror = () => {
-                    console.error(`Failed to load image: ${stim.path}`);
-                    resolve(); // Resolve anyway to avoid hanging Promise.all
-                };
-                img.src = stim.path;
-            });
-        });
-        await Promise.all(promises);
-    }
-
-    // --- jsPsych Timeline ---
-
-    const timeline = [];
-
-    // Preload
-    timeline.push({
-        type: jsPsychPreload,
-        images: allStimuliPaths,
-        on_success: async () => {
-            // Rotate images after preload
-        }
+    // Capture Prolific metadata
+    const pid = jsPsych.data.getURLVariable('PROLIFIC_PID') || 'unknown';
+    const study_id = jsPsych.data.getURLVariable('STUDY_ID') || 'unknown';
+    const session_id = jsPsych.data.getURLVariable('SESSION_ID') || 'unknown';
+    jsPsych.data.addProperties({
+        prolific_id: pid,
+        study_id: study_id,
+        session_id: session_id,
+        subject_id: subject_id,
+        experiment_id: params.experiment_id,
+        experiment_date: new Date().toISOString()
     });
 
-    // Pre-rotation call (we'll do this during the welcome screens)
-    const rotateCall = {
-        type: jsPsychHtmlKeyboardResponse,
-        stimulus: 'Loading experimental assets...',
-        choices: "NO_KEYS",
-        on_start: async () => {
-            await preRotateImages();
-            jsPsych.finishTrial();
-        }
-    };
-    timeline.push(rotateCall);
+    const dist = params.color_distance_deg;
+    const allUniqueStimuli = [];
+    const allSequencePairs = [];
 
-    // Unified Instructions (Welcome -> Consent -> Sequence Intro -> Interactive Test)
+    // Generate 6 equally-spaced anchors
+    const anchorPool = jsPsych.randomization.shuffle(
+        Array.from({ length: 6 }, (_, i) => Math.floor(i * (360 / 6)))
+    );
+
+    let stimuliIdx = 0;
+    const nextStim = () => taskStimuli[stimuliIdx++];
+
+    // Helper to create stim object
+    const createStim = (path, hue, role, condition, is_high_frequency = false) => {
+        const stim = {
+            path: path,
+            hue: (hue + 360) % 360,
+            role: role,
+            condition: condition,
+            is_high_frequency: is_high_frequency,
+            image_id: parseInt(path.match(/obj(\d+)/)[1])
+        };
+        const existing = allUniqueStimuli.find(s => s.path === path && s.hue === stim.hue);
+        if (existing) return existing;
+        allUniqueStimuli.push(stim);
+        return stim;
+    };
+
+    // Create Stimuli Objects
+    // Fan-In: 2A -> 1B
+    const B1 = createStim(nextStim(), anchorPool[1], 'B', 'fanin', true);
+    const A1 = createStim(nextStim(), anchorPool[0] - dist / 2, 'A', 'fanin');
+    const A2 = createStim(nextStim(), anchorPool[0] + dist / 2, 'A', 'fanin');
+    allSequencePairs.push({ A: A1, B: B1 }, { A: A2, B: B1 });
+    A1.color_pair_id = A2.image_id; A1.color_pair_hue = A2.hue;
+    A2.color_pair_id = A1.image_id; A2.color_pair_hue = A1.hue;
+
+    // Fan-Out: 1A -> 2B
+    const A3 = createStim(nextStim(), anchorPool[2], 'A', 'fanout', true);
+    const B2 = createStim(nextStim(), anchorPool[3] - dist / 2, 'B', 'fanout');
+    const B3 = createStim(nextStim(), anchorPool[3] + dist / 2, 'B', 'fanout');
+    allSequencePairs.push({ A: A3, B: B2 }, { A: A3, B: B3 });
+    B2.color_pair_id = B3.image_id; B2.color_pair_hue = B3.hue;
+    B3.color_pair_id = B2.image_id; B3.color_pair_hue = B2.hue;
+
+    // Independent: 2A -> 2B
+    // A4/A5 are color pairmates. B4/B5 are color pairmates.
+    const A4 = createStim(nextStim(), anchorPool[4] - dist / 2, 'A', 'independent');
+    const A5 = createStim(nextStim(), anchorPool[4] + dist / 2, 'A', 'independent');
+    const B4 = createStim(nextStim(), anchorPool[5] - dist / 2, 'B', 'independent');
+    const B5 = createStim(nextStim(), anchorPool[5] + dist / 2, 'B', 'independent');
+
+    allSequencePairs.push({ A: A4, B: B4 }, { A: A5, B: B5 });
+    A4.color_pair_id = A5.image_id; A4.color_pair_hue = A5.hue;
+    A5.color_pair_id = A4.image_id; A5.color_pair_hue = A4.hue;
+    B4.color_pair_id = B5.image_id; B4.color_pair_hue = B5.hue;
+    B5.color_pair_id = B4.image_id; B5.color_pair_hue = B4.hue;
+
+    // --- Timeline ---
+    const timeline = [];
+    timeline.push({ type: jsPsychPreload, images: allStimuliPaths });
+
+    // Instructions
+    let instructionObserver;
     timeline.push({
         type: jsPsychInstructions,
-        pages: [
-            `<p>Welcome to this experiment!</p><p>This experiment will take ${params.completion_time} minutes to complete.</p><p>Press next to begin.</p>`,
-            `<div class="consent-container"><h2>Consent Form</h2><p>Please review this consent form, and download a copy for your records if you like.</p></div>`,
-            `<p>In this experiment, you will see a sequence of images, like the one below:</p>
-             <img src="${instructionStim}" style="width:200px; height:200px; margin: 20px auto; display: block;">
-             <p>Your task is simply to remember them (no need to press any buttons).</p>`,
-            `<div id="interactive-demo">
-                <p>After some time, you will begin a memory test.</p>
-                <p>You will see images from before, in a color wheel. You can slide the color wheel around to change the color of the object. Change the color to match the color of the object as it was shown before.</p>
-                <canvas id="instruction-canvas" width="450" height="450" style="margin: 0 auto; display: block;"></canvas>
-                <p>Test out the color wheel above before moving on.</p>
-                <p>When you click "Next", the experiment will begin!</p>
-            </div>`
-        ],
+        pages: params.instruction_pages,
         show_clickable_nav: true,
         on_load: function () {
-            // Use MutationObserver to detect when the interactive canvas is rendered (on the 4th page)
-            const observer = new MutationObserver((mutations, obs) => {
+            instructionObserver = new MutationObserver((mutations) => {
                 const canvas = document.getElementById('instruction-canvas');
-                if (canvas) {
+                if (canvas && !canvas.dataset.initialized) {
+                    canvas.dataset.initialized = "true";
                     renderColorTest(canvas, { path: instructionStim }, jsPsych);
                     setupColorWheelInteraction(jsPsych, { path: instructionStim }, false, true);
-                    // No need to keep observing once it's set up for this trial
-                    obs.disconnect(); // Disconnect the observer once the canvas is found and initialized
                 }
             });
-            observer.observe(document.body, { childList: true, subtree: true });
-
-            // Cleanup observer when the trial finishes
-            jsPsych.getCurrentTrial().on_finish = () => observer.disconnect();
-        }
+            instructionObserver.observe(document.body, { childList: true, subtree: true });
+        },
+        on_finish: function () { if (instructionObserver) instructionObserver.disconnect(); }
     });
 
     // --- Block Loop ---
     for (let b = 0; b < params.n_blocks; b++) {
-
-        // 0. Pre-block Break
         timeline.push({
             type: jsPsychHtmlKeyboardResponse,
             stimulus: '<div style="font-size: 60px;">+</div>',
             choices: "NO_KEYS",
-            trial_duration: 1000,
-            data: { phase: 'break', block: b }
+            trial_duration: params.interpair_iti,
+            data: { phase: 'iti', block: b }
         });
 
-        // 1. Sequence Phase (Intermixed Transitions)
         const allRepTrials = [];
         for (let r = 0; r < params.n_repetitions_per_block; r++) {
-            const shuffledTransitions = jsPsych.randomization.shuffle(allSequenceTransitions);
-            shuffledTransitions.forEach(pair => {
-                allRepTrials.push(pair.stim);
-                allRepTrials.push(pair.next);
+            jsPsych.randomization.shuffle(allSequencePairs).forEach(pair => {
+                allRepTrials.push({ pair: pair, rep: r });
             });
         }
 
@@ -266,124 +125,274 @@ export async function initTask(jsPsych, subject_id) {
             timeline: [
                 {
                     type: jsPsychHtmlKeyboardResponse,
-                    stimulus: '<div style="font-size: 60px;">+</div>',
-                    choices: "NO_KEYS",
-                    trial_duration: params.iti,
-                    data: { phase: 'fixation', block: b }
-                },
-                {
-                    type: jsPsychCanvasKeyboardResponse,
-                    canvas_size: [400, 400],
-                    stimulus: function (canvas) {
-                        const ctx = canvas.getContext('2d');
-                        const stim = jsPsych.timelineVariable('stim');
-                        const dataUrl = rotatedCache[`${stim.path}_${stim.hue}`];
-                        const img = new Image();
-                        img.onload = () => ctx.drawImage(img, 0, 0, 400, 400);
-                        img.src = dataUrl;
+                    stimulus: function () {
+                        const pair = jsPsych.timelineVariable('pair');
+                        if (params.show_pairs_together) {
+                            return `<div style="display: flex; justify-content: center; align-items: center; gap: 50px;">
+                                <img src="${pair.A.path}" style="width:300px; height:300px; filter: hue-rotate(${pair.A.hue}deg);">
+                                <img src="${pair.B.path}" style="width:300px; height:300px; filter: hue-rotate(${pair.B.hue}deg);">
+                            </div>`;
+                        } else {
+                            return `<img src="${pair.A.path}" style="width:400px; height:400px; filter: hue-rotate(${pair.A.hue}deg);">`;
+                        }
                     },
                     choices: "NO_KEYS",
                     trial_duration: params.stim_duration,
-                    data: { phase: 'sequence', block: b }
+                    data: function () {
+                        const pair = jsPsych.timelineVariable('pair');
+                        return {
+                            phase: 'sequence',
+                            block: b,
+                            rep: jsPsych.timelineVariable('rep'),
+                            path: pair.A.path,
+                            image_id: pair.A.image_id,
+                            target_hue: pair.A.hue,
+                            role: 'A',
+                            pair_b_path: pair.B.path,
+                            condition: pair.A.condition,
+                            is_high_frequency: pair.A.is_high_frequency,
+                            color_pair_id: pair.A.color_pair_id,
+                            color_pair_hue: pair.A.color_pair_hue
+                        };
+                    }
+                },
+                {
+                    type: jsPsychHtmlKeyboardResponse,
+                    stimulus: function () {
+                        const pair = jsPsych.timelineVariable('pair');
+                        if (params.show_pairs_together) return '<div style="font-size: 60px;">+</div>';
+                        return `<img src="${pair.B.path}" style="width:400px; height:400px; filter: hue-rotate(${pair.B.hue}deg);">`;
+                    },
+                    choices: "NO_KEYS",
+                    trial_duration: function () { return params.show_pairs_together ? params.interpair_iti : params.stim_duration; },
+                    data: function () {
+                        if (params.show_pairs_together) return { phase: 'iti' };
+                        const pair = jsPsych.timelineVariable('pair');
+                        return {
+                            phase: 'sequence',
+                            block: b,
+                            rep: jsPsych.timelineVariable('rep'),
+                            path: pair.B.path,
+                            image_id: pair.B.image_id,
+                            target_hue: pair.B.hue,
+                            role: 'B',
+                            condition: pair.B.condition,
+                            is_high_frequency: pair.B.is_high_frequency,
+                            color_pair_id: pair.B.color_pair_id,
+                            color_pair_hue: pair.B.color_pair_hue
+                        };
+                    }
+                },
+                // If not together, we need one more ITI
+                {
+                    timeline: [{
+                        type: jsPsychHtmlKeyboardResponse,
+                        stimulus: '<div style="font-size: 60px;">+</div>',
+                        choices: "NO_KEYS",
+                        trial_duration: params.interpair_iti
+                    }],
+                    conditional_function: function () { return !params.show_pairs_together; }
                 }
             ],
-            timeline_variables: allRepTrials.map(t => ({ stim: t }))
+            timeline_variables: allRepTrials
         };
         timeline.push(sequenceTimeline);
 
-        // 2. Test Phase Screen
+        // --- Color Memory Test ---
         timeline.push({
             type: jsPsychInstructions,
-            pages: [`<p>Now you will begin a memory test.</p>Identify the color of each object as accurately as you can.</p>`],
+            pages: [`<p>Now you will begin a memory test.</p>Identify the color of each object as accurately as you can to earn bonus money!</p>`],
             show_clickable_nav: true
         });
 
-        // 3. Test Trials (Intermixed objects)
         const testStimuli = jsPsych.randomization.shuffle(allUniqueStimuli);
-        const limitedTestStim = testStimuli.slice(0, Math.min(params.n_test_trials_per_block, testStimuli.length));
-
-        limitedTestStim.forEach(target => {
+        testStimuli.forEach(target => {
             let lastHue = null;
             timeline.push({
                 type: jsPsychCanvasButtonResponse,
                 canvas_size: [450, 450],
-                stimulus: function (canvas) {
-                    renderColorTest(canvas, target, jsPsych);
-                },
+                stimulus: (canvas) => renderColorTest(canvas, target, jsPsych),
                 choices: ['Submit'],
-                on_load: function () {
-                    // setup interaction; pass 'true' for noAdvance
-                    setupColorWheelInteraction(jsPsych, target, false, true, (hue) => {
-                        lastHue = hue;
-                    });
+                trial_duration: params.max_report_time,
+                on_load: () => setupColorWheelInteraction(jsPsych, target, false, true, (h) => { lastHue = h; }),
+                data: {
+                    phase: 'color_test',
+                    block: b,
+                    path: target.path,
+                    image_id: target.image_id,
+                    target_hue: target.hue,
+                    condition: target.condition,
+                    role: target.role,
+                    color_pair_id: target.color_pair_id,
+                    color_pair_hue: target.color_pair_hue,
+                    is_high_frequency: target.is_high_frequency
                 },
-                data: { phase: 'test', block: b, target_path: target.path, target_hue: target.hue },
                 on_finish: function (data) {
                     data.response_hue = lastHue;
                     if (data.response_hue !== null) {
                         let diff = Math.abs(data.target_hue - data.response_hue);
                         if (diff > 180) diff = 360 - diff;
                         data.error_deg = diff;
+                        data.is_accurate = diff <= 10;
+
+                        // Attraction/Repulsion calculation:
+                        if (data.color_pair_hue !== undefined) {
+                            let hue_diff = data.response_hue - data.target_hue;
+                            if (hue_diff > 180) hue_diff -= 360;
+                            if (hue_diff < -180) hue_diff += 360;
+
+                            let pair_diff = data.color_pair_hue - data.target_hue;
+                            if (pair_diff > 180) pair_diff -= 360;
+                            if (pair_diff < -180) pair_diff += 360;
+
+                            // Positive bias_deg = attraction, negative = repulsion
+                            data.bias_deg = (pair_diff > 0) ? hue_diff : -hue_diff;
+                        }
                     }
                 }
             });
         });
 
-        // Attention Check
-        let lastAttHue = null;
-        const attentionHue = 60; // YELLOW in HSL
+        // --- Associative Memory Test ---
         timeline.push({
-            type: jsPsychCanvasButtonResponse,
-            canvas_size: [450, 450],
-            stimulus: function (canvas) {
-                renderColorTest(canvas, { path: '' }, jsPsych, true);
-            },
-            choices: ['Submit'],
-            on_load: function () {
-                setupColorWheelInteraction(jsPsych, { path: '' }, true, true, (hue) => {
-                    lastAttHue = hue;
-                });
-            },
-            data: { phase: 'attention_check', block: b, target_hue: attentionHue },
-            on_finish: function (data) {
-                data.response_hue = lastAttHue;
+            type: jsPsychInstructions,
+            pages: [`<p>Now for an associative memory test.</p><p>You will see an image. Correctly select which of the three options below was paired with it to earn bonus money!</p>`],
+            show_clickable_nav: true
+        });
+
+        // Ensure unique cues and unique targets for the associative test
+        const uniqueCueTargetPairs = [];
+        const usedCues = new Set();
+        const usedTargets = new Set();
+
+        jsPsych.randomization.shuffle(allSequencePairs).forEach(p => {
+            if (!usedCues.has(p.A.path) && !usedTargets.has(p.B.path)) {
+                usedCues.add(p.A.path);
+                usedTargets.add(p.B.path);
+                uniqueCueTargetPairs.push(p);
             }
         });
-    }
 
-    // 4. Final Save and End
-    timeline.push({
-        type: jsPsychPipe,
-        action: "save",
-        experiment_id: params.data_pipe_id,
-        filename: `${subject_id}.csv`,
-        data_string: () => jsPsych.data.get().csv(),
-        wait_message: "Saving data..."
-    });
+        const assocTrials = uniqueCueTargetPairs.slice(0, params.n_associative_test_trials);
+        assocTrials.forEach(trial => {
+            // Foil A: randomly chosen from another pair's A
+            const otherAPairs = allSequencePairs.filter(p => p.A.path !== trial.A.path);
+            const foilA = jsPsych.randomization.sampleWithoutReplacement(otherAPairs, 1)[0].A;
+            // Foil B: randomly chosen from another pair's B and NOT the target
+            const otherBPairs = allSequencePairs.filter(p => p.B.path !== trial.B.path && p.B.path !== trial.A.path);
+            const foilB = jsPsych.randomization.sampleWithoutReplacement(otherBPairs, 1)[0].B;
+
+            const options = jsPsych.randomization.shuffle([
+                { path: trial.B.path, hue: trial.B.hue, is_correct: true },
+                { path: foilA.path, hue: foilA.hue, is_correct: false },
+                { path: foilB.path, hue: foilB.hue, is_correct: false }
+            ]);
+
+            timeline.push({
+                type: jsPsychHtmlButtonResponse,
+                stimulus: `<p>Which image was paired with this one?</p>
+                           <img src="${trial.A.path}" style="width:250px; height:250px; filter: hue-rotate(${trial.A.hue}deg);">`,
+                choices: options.map(opt => `<img src="${opt.path}" style="width:150px; height:150px; filter: hue-rotate(${opt.hue}deg);">`),
+                data: {
+                    phase: 'assoc_test',
+                    block: b,
+                    target_path: trial.B.path,
+                    cue_path: trial.A.path,
+                    condition: trial.A.condition,
+                    foil1_path: options.find(o => !o.is_correct).path,
+                    foil2_path: options.filter(o => !o.is_correct)[1].path
+                },
+                on_finish: function (data) {
+                    data.response_index = data.response; // 0, 1, or 2
+                    data.is_correct = options[data.response].is_correct;
+                }
+            });
+        });
+    }
 
     timeline.push({
         type: jsPsychHtmlKeyboardResponse,
         stimulus: function () {
-            const testData = jsPsych.data.get().filter({ phase: 'test' }).values();
-            const validErrors = testData.map(d => d.error_deg).filter(e => e !== null && e !== undefined);
-            const n = validErrors.length;
-            const avg_error = (validErrors.reduce((a, b) => a + b, 0) / n).toFixed(1);
-            const p10 = ((validErrors.filter(e => e <= 10).length / n) * 100).toFixed(0);
-            const p20 = ((validErrors.filter(e => e <= 20).length / n) * 100).toFixed(0);
-            return `<div style="padding: 20px; line-height: 1.6;">
+            const colorData = jsPsych.data.get().filter({ phase: 'color_test' }).values();
+            const assocData = jsPsych.data.get().filter({ phase: 'assoc_test' }).values();
+            const colorAcc = colorData.length > 0 ? colorData.filter(d => d.is_accurate).length / colorData.length : 0;
+            const assocAcc = assocData.length > 0 ? assocData.filter(d => d.is_correct).length / assocData.length : 0;
+            const overallAcc = (colorData.filter(d => d.is_accurate).length + assocData.filter(d => d.is_correct).length) / (colorData.length + assocData.length || 1);
+            const bonus = (overallAcc * params.max_bonus).toFixed(2);
+
+            return `<div style="line-height: 1.6;">
                 <h2>Experiment Complete</h2>
-                <p>You've reached the end of the experiment!</p>
-                <p>On average, your color memory was <strong>${avg_error}</strong> degrees away from the ground truth.</p>
-                <p>You got <strong>${p10}%</strong> of answers within 10 degrees of the truth, and <strong>${p20}%</strong> within 20 degrees.</p>
-                <p>Well done!</p>
-                <button id="end-btn" class="jspsych-btn" style="padding: 10px 20px; font-size: 1.2rem; cursor: pointer;">End Experiment</button>
+                <p>Color Memory Accuracy: <strong>${(colorAcc * 100).toFixed(1)}%</strong></p>
+                <p>Associative Memory Accuracy: <strong>${(assocAcc * 100).toFixed(1)}%</strong></p>
+                <p>Bonus Earned: <strong>$${bonus}</strong></p>
+                <br><button id="end-btn" class="jspsych-btn">End Experiment</button>
             </div>`;
         },
-        choices: "NO_KEYS",
+        data: function () {
+            const colorData = jsPsych.data.get().filter({ phase: 'color_test' }).values();
+            const assocData = jsPsych.data.get().filter({ phase: 'assoc_test' }).values();
+            const colorAcc = colorData.length > 0 ? colorData.filter(d => d.is_accurate).length / colorData.length : 0;
+            const assocAcc = assocData.length > 0 ? assocData.filter(d => d.is_correct).length / assocData.length : 0;
+            const overallAcc = (colorData.filter(d => d.is_accurate).length + assocData.filter(d => d.is_correct).length) / (colorData.length + assocData.length || 1);
+            const bonus = (overallAcc * params.max_bonus).toFixed(2);
+
+            const validErrors = colorData.map(d => d.error_deg).filter(e => e !== null && e !== undefined);
+            const avg_error = validErrors.length > 0 ? (validErrors.reduce((a, b) => a + b, 0) / validErrors.length).toFixed(1) : 0;
+
+            return {
+                phase: 'final_summary',
+                total_time_min: (jsPsych.getTotalTime() / 60000).toFixed(2),
+                final_avg_error: avg_error,
+                final_bonus_earned: bonus,
+                color_accuracy: colorAcc,
+                assoc_accuracy: assocAcc
+            };
+        },
         on_load: function () {
             document.getElementById('end-btn').addEventListener('click', () => {
-                const pid = jsPsych.data.getURLVariable('PROLIFIC_PID') || 'unknown';
-                window.location.href = `https://app.prolific.com/submissions/complete?cc=${pid}`;
+                const colorData = jsPsych.data.get().filter({ phase: 'color_test' }).values();
+                const assocData = jsPsych.data.get().filter({ phase: 'assoc_test' }).values();
+                const colorAcc = colorData.length > 0 ? colorData.filter(d => d.is_accurate).length / colorData.length : 0;
+                const assocAcc = assocData.length > 0 ? assocData.filter(d => d.is_correct).length / assocData.length : 0;
+                const overallAcc = (colorData.filter(d => d.is_accurate).length + assocData.filter(d => d.is_correct).length) / (colorData.length + assocData.length || 1);
+                const bonus = (overallAcc * params.max_bonus).toFixed(2);
+
+                const validErrors = colorData.map(d => d.error_deg).filter(e => e !== null && e !== undefined);
+                const avg_error = validErrors.length > 0 ? (validErrors.reduce((a, b) => a + b, 0) / validErrors.length).toFixed(1) : 0;
+
+                const summaryResults = {
+                    phase: 'final_summary',
+                    total_time_min: (jsPsych.getTotalTime() / 60000).toFixed(2),
+                    final_avg_error: avg_error,
+                    final_bonus_earned: bonus,
+                    color_accuracy: colorAcc,
+                    assoc_accuracy: assocAcc
+                };
+
+                // CRITICAL: Manually add to data before saving!
+                jsPsych.data.write(summaryResults);
+
+                const isLocal = window.location.protocol === "file:" ||
+                    window.location.hostname === "localhost" ||
+                    window.location.hostname === "127.0.0.1";
+
+                if (isLocal) {
+                    jsPsych.data.get().localSave('csv', `fifocolor_${subject_id}.csv`);
+                } else {
+                    if (typeof jsPsychPipe !== 'undefined') {
+                        jsPsych.data.get().pipe({
+                            action: "save",
+                            experiment_id: params.data_pipe_id,
+                            filename: `${subject_id}.csv`,
+                            data_string: jsPsych.data.get().csv()
+                        });
+                    }
+                }
+
+                const cc = params.prolific_completion_code || 'unknown';
+                setTimeout(() => {
+                    window.location.href = `https://app.prolific.com/submissions/complete?cc=${cc}`;
+                }, 600);
             });
         }
     });
@@ -397,17 +406,18 @@ function renderColorTest(canvas, target, jsPsych, isAttention = false, currentHu
     const ctx = canvas.getContext('2d');
     const cx = canvas.width / 2;
     const cy = canvas.height / 2;
-    const radius = 200; // Original radius
-    const innerPadding = 60; // Fixed padding
+    const radius = 200;
+    const innerPadding = 60;
 
     ctx.fillStyle = params.background_color;
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-    for (let i = 0; i < params.n_colors; i++) {
+    // Color Wheel
+    for (let i = 0; i < 360; i++) {
         ctx.beginPath();
         ctx.moveTo(cx, cy);
-        ctx.arc(cx, cy, radius, (i * Math.PI) / (params.n_colors / 2), ((i + 1) * Math.PI) / (params.n_colors / 2));
-        ctx.fillStyle = `hsl(${i * (360 / params.n_colors)}, 100%, 50%)`;
+        ctx.arc(cx, cy, radius, (i * Math.PI) / 180, ((i + 1) * Math.PI) / 180);
+        ctx.fillStyle = `hsl(${i}, 100%, 50%)`;
         ctx.fill();
     }
 
@@ -416,17 +426,10 @@ function renderColorTest(canvas, target, jsPsych, isAttention = false, currentHu
     ctx.fillStyle = params.background_color;
     ctx.fill();
 
-    // Draw selection indicator
     if (currentHue !== null) {
-        const radAngle = (currentHue * (360 / params.n_colors)) * (Math.PI / 180);
+        const radAngle = (currentHue) * (Math.PI / 180);
         const indicatorX = cx + (radius - innerPadding / 2) * Math.cos(radAngle);
         const indicatorY = cy + (radius - innerPadding / 2) * Math.sin(radAngle);
-
-        ctx.beginPath();
-        ctx.arc(indicatorX, indicatorY, innerPadding * 0.35, 0, Math.PI * 2);
-        ctx.strokeStyle = "white";
-        ctx.lineWidth = 3;
-        ctx.stroke();
         ctx.beginPath();
         ctx.arc(indicatorX, indicatorY, innerPadding * 0.3, 0, Math.PI * 2);
         ctx.strokeStyle = "black";
@@ -435,75 +438,59 @@ function renderColorTest(canvas, target, jsPsych, isAttention = false, currentHu
     }
 
     if (!isAttention && target.path) {
-        // Draw image (either grayscale or rotated)
         const img = new Image();
         img.onload = () => {
-            const offCanvas = document.createElement('canvas');
-            offCanvas.width = img.width;
-            offCanvas.height = img.height;
-            const offCtx = offCanvas.getContext('2d');
-            offCtx.drawImage(img, 0, 0);
-            const imgData = offCtx.getImageData(0, 0, offCanvas.width, offCanvas.height);
-
+            ctx.save();
             if (currentHue === null) {
-                rotateHue(imgData, 0, true); // Grayscale
+                ctx.filter = 'grayscale(100%)';
             } else {
-                rotateHue(imgData, currentHue, false);
+                // Using Canvas Filter to avoid reading pixel data!
+                ctx.filter = `hue-rotate(${currentHue}deg)`;
             }
-
-            offCtx.putImageData(imgData, 0, 0);
             const size = canvas.width / 3;
-            ctx.drawImage(offCanvas, cx - size / 2, cy - size / 2, size, size);
-        };
-        img.onerror = () => {
-            console.error(`Failed to load image during test: ${target.path}`);
+            ctx.drawImage(img, cx - size / 2, cy - size / 2, size, size);
+            ctx.restore();
         };
         img.src = target.path;
-    } else if (isAttention) {
-        ctx.fillStyle = "black";
-        ctx.textAlign = "center";
-        ctx.font = `bold ${Math.round(canvas.width * 0.04)}px Inter, sans-serif`;
-        ctx.fillText("Attention check:", cx, cy - radius * 0.1);
-        ctx.fillText("submit YELLOW", cx, cy + radius * 0.1);
     }
 }
 
 function setupColorWheelInteraction(jsPsych, target, isAttention = false, noAdvance = false, onUpdate = null) {
     const canvas = document.querySelector('canvas');
     if (!canvas) return;
-    const ctx = canvas.getContext('2d');
     const cx = canvas.width / 2;
     const cy = canvas.height / 2;
-
-    const updateUI = (hue) => {
-        // Re-render the whole test to update the indicator position and image
-        renderColorTest(canvas, target, jsPsych, isAttention, hue);
-    };
 
     const mouseHandler = (e) => {
         const rect = canvas.getBoundingClientRect();
         const x = e.clientX - rect.left - cx;
         const y = e.clientY - rect.top - cy;
+        const radius = Math.sqrt(x * x + y * y);
+
+        // Only trigger if clicking on the wheel
+        if (radius < 140 || radius > 200) return;
+
         const angle = Math.atan2(y, x) * (180 / Math.PI);
         const hue = (angle + 360) % 360;
-        const normalizedHue = hue * (params.n_colors / 360);
-        updateUI(normalizedHue);
-        if (onUpdate) onUpdate(normalizedHue);
+
+        renderColorTest(canvas, target, jsPsych, isAttention, hue);
+        if (onUpdate) onUpdate(hue);
 
         const stop = () => {
-            canvas.removeEventListener('mousemove', mouseHandler);
             window.removeEventListener('mouseup', stop);
-
-            if (!noAdvance) {
-                setTimeout(() => jsPsych.finishTrial({
-                    response_hue: normalizedHue,
-                    rt: jsPsych.getTotalTime()
-                }), 400);
-            }
+            canvas.removeEventListener('mousemove', moveHandler);
+        };
+        const moveHandler = (me) => {
+            const mrect = canvas.getBoundingClientRect();
+            const mx = me.clientX - mrect.left - cx;
+            const my = me.clientY - mrect.top - cy;
+            const mangle = Math.atan2(my, mx) * (180 / Math.PI);
+            const mhue = (mangle + 360) % 360;
+            renderColorTest(canvas, target, jsPsych, isAttention, mhue);
+            if (onUpdate) onUpdate(mhue);
         };
         window.addEventListener('mouseup', stop);
-        canvas.addEventListener('mousemove', mouseHandler);
+        canvas.addEventListener('mousemove', moveHandler);
     };
-
     canvas.addEventListener('mousedown', mouseHandler);
 }

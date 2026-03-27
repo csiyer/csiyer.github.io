@@ -9,11 +9,17 @@
     <script src="https://unpkg.com/@jspsych/plugin-image-keyboard-response@1.1.3"></script>
     <script src="https://unpkg.com/@jspsych/plugin-canvas-button-response@1.1.3"></script>
     <script src="https://unpkg.com/@jspsych/plugin-canvas-keyboard-response@1.1.3"></script>
+    <script src="https://unpkg.com/@jspsych/plugin-html-button-response@1.1.3"></script>
     <script src="https://unpkg.com/@jspsych/plugin-html-keyboard-response@1.1.3"></script>
     <script src="https://unpkg.com/@jspsych/plugin-preload@1.1.3"></script>
     <script src="https://unpkg.com/@jspsych-contrib/plugin-pipe"></script>
     <link rel="stylesheet" href="https://unpkg.com/jspsych@7.3.4/css/jspsych.css">
 
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap" rel="stylesheet">
     <style>
         body {
             background-color: #f0f0f0;
@@ -56,11 +62,9 @@
 
 <body>
     <script src="params.js"></script>
+    <script src="task.js"></script>
 
-    <!-- Load parameters and task logic -->
-    <script type="module">
-        import { initTask } from './task.js';
-
+    <script>
         // Initialize jsPsych with default body positioning
         const jsPsych = initJsPsych({
             on_finish: function () {
