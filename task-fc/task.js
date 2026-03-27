@@ -406,11 +406,12 @@ async function initTask(jsPsych, subject_id) {
                         body: JSON.stringify({
                             experiment_id: params.data_pipe_id.trim(),
                             filename: `${subject_id}.csv`,
-                            data: jsPsych.data.get().csv().trim(),
+                            data_string: jsPsych.data.get().csv().trim(),
                         }),
                     })
                     .then(response => {
                         if (response.ok) {
+                            console.log("DataPipe successfully saved:", subject_id);
                             redirect();
                         } else {
                             response.text().then(msg => {
