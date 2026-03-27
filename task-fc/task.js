@@ -23,34 +23,17 @@ async function initTask(jsPsych, subject_id) {
     });
 
     const dist = params.color_distance_deg;
-    // --- Pre-load Stimuli into Cache ---
-    const stimuliCache = {};
-    const promises = allStimuliPaths.map(path => new Promise(resolve => {
-        const img = new Image();
-        img.crossOrigin = "anonymous";
-        img.onload = () => {
-            // We create a red-tinted version to allow reliable hue-rotation
-            const c = document.createElement('canvas');
-            c.width = img.width; c.height = img.height;
-            const ctx = c.getContext('2d');
-            ctx.drawImage(img, 0, 0);
-            
-            // Apply a red tint (hue 0) so hue-rotate has a base to work from
-            ctx.globalCompositeOperation = 'color';
-            ctx.fillStyle = 'red';
-            ctx.fillRect(0, 0, c.width, c.height);
-            
-            stimuliCache[path] = { original: img, red: c };
-            resolve();
-        };
-        img.onerror = () => { console.error("Failed to load stimulus:", path); resolve(); };
-        img.src = path;
-    }));
-    await Promise.all(promises);
-    window.stimuliCache = stimuliCache;
-
     const allUniqueStimuli = [];
     const allSequencePairs = [];
+
+    // Pre-load Cache (Non-blocking)
+    const stimuliCache = {};
+    allStimuliPaths.forEach(path => {
+        const img = new Image();
+        img.onload = () => { stimuliCache[path] = img; };
+        img.src = path;
+    });
+    window.stimuliCache = stimuliCache;
 
     // Create Stimuli Objects (A1-A6, B1-B6)
     const anchorPool = jsPsych.randomization.shuffle(
@@ -490,28 +473,33 @@ function renderColorTest(canvas, target, jsPsych, isAttention = false, currentHu
         ctx.stroke();
     }
 
-    // Stimulus (using Cache)
+    // Stimulus Drawing
     if (!isAttention && target.path) {
-        const cache = window.stimuliCache[target.path];
-        if (cache) {
-            const size = canvas.width / 3;
-            const x = cx - size / 2;
-            const y = cy - size / 2;
-
-            ctx.save();
-            if (currentHue === null) {
-                // If selection is not yet made, show the original as grayscale
-                ctx.filter = 'grayscale(100%)';
-                ctx.drawImage(cache.original, x, y, size, size);
-            } else {
-                // For reliable cross-browser color matching:
-                // We rotate the hue of our pre-tinted "Red" base (0deg).
-                ctx.filter = `hue-rotate(${currentHue}deg)`;
-                ctx.drawImage(cache.red, x, y, size, size);
-                console.log(`Rendering hue: ${currentHue.toFixed(1)}°`);
-            }
-            ctx.restore();
+        let img = window.stimuliCache[target.path];
+        // If image not in cache yet, load it on the fly
+        if (!img) {
+            img = new Image();
+            img.src = target.path;
+            window.stimuliCache[target.path] = img;
         }
+
+        const size = canvas.width / 3;
+        const x = cx - size / 2;
+        const y = cy - size / 2;
+
+        ctx.save();
+        if (currentHue === null) {
+            // Grayscale using the most robust method: Gray fill with saturation blend
+            ctx.drawImage(img, x, y, size, size);
+            ctx.globalCompositeOperation = 'saturation';
+            ctx.fillStyle = 'gray';
+            ctx.fillRect(x, y, size, size);
+        } else {
+            // Hue rotation using CSS Filter if possible, works on Red objects
+            ctx.filter = `hue-rotate(${currentHue}deg)`;
+            ctx.drawImage(img, x, y, size, size);
+        }
+        ctx.restore();
     }
 }
 
