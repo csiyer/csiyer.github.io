@@ -23,10 +23,18 @@ async function initTask(jsPsych, subject_id) {
     });
 
     const dist = params.color_distance_deg;
-    const allUniqueStimuli = [];
-    const allSequencePairs = [];
+    // --- Pre-load Stimuli into Cache ---
+    const stimuliCache = {};
+    const promises = allStimuliPaths.map(path => new Promise(resolve => {
+        const img = new Image();
+        img.onload = () => { stimuliCache[path] = img; resolve(); };
+        img.onerror = () => { console.error("Failed to load:", path); resolve(); };
+        img.src = path;
+    }));
+    await Promise.all(promises);
+    window.stimuliCache = stimuliCache;
 
-    // Generate 6 equally-spaced anchors
+    // Create Stimuli Objects (A1-A6, B1-B6)
     const anchorPool = jsPsych.randomization.shuffle(
         Array.from({ length: 6 }, (_, i) => Math.floor(i * (360 / 6)))
     );
@@ -390,35 +398,30 @@ async function initTask(jsPsych, subject_id) {
                     btn.disabled = true;
                     btn.innerHTML = "Saving data, please wait...";
 
-                    // Explicitly use fetch to DataPipe to ensure it finishes before redirect
                     fetch("https://pipe.jspsych.org/api/data/", {
                         method: "POST",
                         headers: {
                             "Content-Type": "application/json",
-                            "Accept": "application/json",
                         },
                         body: JSON.stringify({
-                            experiment_id: params.data_pipe_id,
+                            experiment_id: params.data_pipe_id.trim(),
                             filename: `${subject_id}.csv`,
-                            data: jsPsych.data.get().csv(),
+                            data: jsPsych.data.get().csv().trim(),
                         }),
                     })
                     .then(response => {
                         if (response.ok) {
-                            console.log("DataPipe success:", response);
                             redirect();
                         } else {
-                            // If it's a server error, show it to help debug (e.g. wrong ID)
-                            response.text().then(text => {
-                                console.error("DataPipe Server Error:", text);
+                            response.text().then(msg => {
+                                console.error("DataPipe Reject:", msg);
                                 btn.innerHTML = `Error ${response.status}: contact admin.`;
-                                // Redirect after bit to not strand participant
                                 setTimeout(redirect, 6000);
                             });
                         }
                     })
                     .catch(error => {
-                        console.error("DataPipe Network Error:", error);
+                        console.error("DataPipe network error:", error);
                         btn.innerHTML = "Network Error. Redirecting in 6s...";
                         setTimeout(redirect, 6000);
                     });
@@ -456,6 +459,7 @@ function renderColorTest(canvas, target, jsPsych, isAttention = false, currentHu
     ctx.fillStyle = params.background_color;
     ctx.fill();
 
+    // Indicator
     if (currentHue !== null) {
         const radAngle = (currentHue) * (Math.PI / 180);
         const indicatorX = cx + (radius - innerPadding / 2) * Math.cos(radAngle);
@@ -467,21 +471,31 @@ function renderColorTest(canvas, target, jsPsych, isAttention = false, currentHu
         ctx.stroke();
     }
 
+    // Stimulus (using Cache)
     if (!isAttention && target.path) {
-        const img = new Image();
-        img.onload = () => {
+        const img = window.stimuliCache[target.path];
+        if (img) {
+            const size = canvas.width / 3;
+            const x = cx - size / 2;
+            const y = cy - size / 2;
+
             ctx.save();
             if (currentHue === null) {
+                // If not chosen, show as grayscale using canvas filters if possible
                 ctx.filter = 'grayscale(100%)';
-            } else {
-                // Using Canvas Filter to avoid reading pixel data!
-                ctx.filter = `hue-rotate(${currentHue}deg)`;
             }
-            const size = canvas.width / 3;
-            ctx.drawImage(img, cx - size / 2, cy - size / 2, size, size);
+            ctx.drawImage(img, x, y, size, size);
+            
+            if (currentHue !== null) {
+                // Effective tinting: Draw a hue-appropriate overlay over the object
+                ctx.globalCompositeOperation = 'hue';
+                ctx.fillStyle = `hsl(${currentHue}, 100%, 50%)`;
+                ctx.fillRect(x, y, size, size);
+                ctx.globalCompositeOperation = 'source-atop'; 
+                ctx.drawImage(img, x, y, size, size); // Alpha-mask to object
+            }
             ctx.restore();
-        };
-        img.src = target.path;
+        }
     }
 }
 
