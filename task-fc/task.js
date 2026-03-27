@@ -27,8 +27,23 @@ async function initTask(jsPsych, subject_id) {
     const stimuliCache = {};
     const promises = allStimuliPaths.map(path => new Promise(resolve => {
         const img = new Image();
-        img.onload = () => { stimuliCache[path] = img; resolve(); };
-        img.onerror = () => { console.error("Failed to load:", path); resolve(); };
+        img.crossOrigin = "anonymous";
+        img.onload = () => {
+            // We create a red-tinted version to allow reliable hue-rotation
+            const c = document.createElement('canvas');
+            c.width = img.width; c.height = img.height;
+            const ctx = c.getContext('2d');
+            ctx.drawImage(img, 0, 0);
+            
+            // Apply a red tint (hue 0) so hue-rotate has a base to work from
+            ctx.globalCompositeOperation = 'color';
+            ctx.fillStyle = 'red';
+            ctx.fillRect(0, 0, c.width, c.height);
+            
+            stimuliCache[path] = { original: img, red: c };
+            resolve();
+        };
+        img.onerror = () => { console.error("Failed to load stimulus:", path); resolve(); };
         img.src = path;
     }));
     await Promise.all(promises);
@@ -384,9 +399,9 @@ async function initTask(jsPsych, subject_id) {
                 jsPsych.data.write(summaryResults);
 
                 const isLocal = window.location.protocol === "file:" ||
-                                window.location.hostname === "localhost" ||
-                                window.location.hostname === "127.0.0.1";
-                
+                    window.location.hostname === "localhost" ||
+                    window.location.hostname === "127.0.0.1";
+
                 const redirect = () => {
                     const cc = params.prolific_completion_code || 'unknown';
                     window.location.href = `https://app.prolific.com/submissions/complete?cc=${cc}`;
@@ -412,23 +427,23 @@ async function initTask(jsPsych, subject_id) {
                             data_string: jsPsych.data.get().csv().trim(),
                         }),
                     })
-                    .then(response => {
-                        if (response.ok) {
-                            console.log("DataPipe successfully saved:", subject_id);
-                            redirect();
-                        } else {
-                            response.text().then(msg => {
-                                console.error("DataPipe Reject:", msg);
-                                btn.innerHTML = `Error ${response.status}: contact admin.`;
-                                setTimeout(redirect, 6000);
-                            });
-                        }
-                    })
-                    .catch(error => {
-                        console.error("DataPipe network error:", error);
-                        btn.innerHTML = "Network Error. Redirecting in 6s...";
-                        setTimeout(redirect, 6000);
-                    });
+                        .then(response => {
+                            if (response.ok) {
+                                console.log("DataPipe successfully saved:", subject_id);
+                                redirect();
+                            } else {
+                                response.text().then(msg => {
+                                    console.error("DataPipe Reject:", msg);
+                                    btn.innerHTML = `Error ${response.status}: contact admin.`;
+                                    setTimeout(redirect, 6000);
+                                });
+                            }
+                        })
+                        .catch(error => {
+                            console.error("DataPipe network error:", error);
+                            btn.innerHTML = "Network Error. Redirecting in 6s...";
+                            setTimeout(redirect, 6000);
+                        });
                 }
             });
         }
@@ -477,26 +492,23 @@ function renderColorTest(canvas, target, jsPsych, isAttention = false, currentHu
 
     // Stimulus (using Cache)
     if (!isAttention && target.path) {
-        const img = window.stimuliCache[target.path];
-        if (img) {
+        const cache = window.stimuliCache[target.path];
+        if (cache) {
             const size = canvas.width / 3;
             const x = cx - size / 2;
             const y = cy - size / 2;
 
             ctx.save();
             if (currentHue === null) {
-                // If not chosen, show as grayscale using canvas filters if possible
+                // If selection is not yet made, show the original as grayscale
                 ctx.filter = 'grayscale(100%)';
-            }
-            ctx.drawImage(img, x, y, size, size);
-            
-            if (currentHue !== null) {
-                // Effective tinting: Draw a hue-appropriate overlay over the object
-                ctx.globalCompositeOperation = 'hue';
-                ctx.fillStyle = `hsl(${currentHue}, 100%, 50%)`;
-                ctx.fillRect(x, y, size, size);
-                ctx.globalCompositeOperation = 'source-atop'; 
-                ctx.drawImage(img, x, y, size, size); // Alpha-mask to object
+                ctx.drawImage(cache.original, x, y, size, size);
+            } else {
+                // For reliable cross-browser color matching:
+                // We rotate the hue of our pre-tinted "Red" base (0deg).
+                ctx.filter = `hue-rotate(${currentHue}deg)`;
+                ctx.drawImage(cache.red, x, y, size, size);
+                console.log(`Rendering hue: ${currentHue.toFixed(1)}°`);
             }
             ctx.restore();
         }
