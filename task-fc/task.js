@@ -373,26 +373,56 @@ async function initTask(jsPsych, subject_id) {
                 jsPsych.data.write(summaryResults);
 
                 const isLocal = window.location.protocol === "file:" ||
-                    window.location.hostname === "localhost" ||
-                    window.location.hostname === "127.0.0.1";
+                                window.location.hostname === "localhost" ||
+                                window.location.hostname === "127.0.0.1";
+                
+                const redirect = () => {
+                    const cc = params.prolific_completion_code || 'unknown';
+                    window.location.href = `https://app.prolific.com/submissions/complete?cc=${cc}`;
+                };
 
                 if (isLocal) {
                     jsPsych.data.get().localSave('csv', `fifocolor_${subject_id}.csv`);
+                    setTimeout(redirect, 600);
                 } else {
-                    if (typeof jsPsychPipe !== 'undefined') {
-                        jsPsych.data.get().pipe({
-                            action: "save",
+                    // Update button to show progress
+                    const btn = document.getElementById('end-btn');
+                    btn.disabled = true;
+                    btn.innerHTML = "Saving data, please wait...";
+
+                    // Explicitly use fetch to DataPipe to ensure it finishes before redirect
+                    fetch("https://pipe.jspsych.org/api/data/", {
+                        method: "POST",
+                        headers: {
+                            "Content-Type": "application/json",
+                            "Accept": "application/json",
+                        },
+                        body: JSON.stringify({
                             experiment_id: params.data_pipe_id,
                             filename: `${subject_id}.csv`,
-                            data_string: jsPsych.data.get().csv()
-                        });
-                    }
+                            data: jsPsych.data.get().csv(),
+                        }),
+                    })
+                    .then(response => {
+                        if (response.ok) {
+                            console.log("DataPipe success:", response);
+                            redirect();
+                        } else {
+                            // If it's a server error, show it to help debug (e.g. wrong ID)
+                            response.text().then(text => {
+                                console.error("DataPipe Server Error:", text);
+                                btn.innerHTML = `Error ${response.status}: contact admin.`;
+                                // Redirect after bit to not strand participant
+                                setTimeout(redirect, 6000);
+                            });
+                        }
+                    })
+                    .catch(error => {
+                        console.error("DataPipe Network Error:", error);
+                        btn.innerHTML = "Network Error. Redirecting in 6s...";
+                        setTimeout(redirect, 6000);
+                    });
                 }
-
-                const cc = params.prolific_completion_code || 'unknown';
-                setTimeout(() => {
-                    window.location.href = `https://app.prolific.com/submissions/complete?cc=${cc}`;
-                }, 600);
             });
         }
     });
