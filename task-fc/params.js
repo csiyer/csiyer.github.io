@@ -26,7 +26,6 @@ const params = {
 
     ////////// STUDY STUFF ///////
     data_pipe_id: "sNnaSCko8Xca",  // replace with your OSF DataPipe ID
-    prolific_study_id: "PLACEHOLDER_PROLIFIC_ID",
     prolific_completion_code: "C1FKJGUS", // Change this to your Prolific completion code
     consent_form_path: "../files/online_consent_form.pdf",
     max_bonus: 3,

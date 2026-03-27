@@ -6,8 +6,7 @@
 async function initTask(jsPsych, subject_id) {
 
     const allStimuliPaths = Array.from({ length: 36 }, (_, i) => `stimuli/obj${(i + 1).toString().padStart(2, '0')}.jpg`);
-    const instructionStim = allStimuliPaths[0];
-    const taskStimuli = jsPsych.randomization.shuffle(allStimuliPaths.slice(1));
+    const taskStimuli = jsPsych.randomization.shuffle(allStimuliPaths.slice(1)); // exclude instruction image
 
     // Capture Prolific metadata
     jsPsych.data.addProperties({
@@ -114,17 +113,25 @@ async function initTask(jsPsych, subject_id) {
 
         const allRepTrials = [];
         for (let r = 0; r < params.n_repetitions_per_block; r++) {
-            jsPsych.randomization.shuffle(allSequencePairs).forEach(pair => {
-                allRepTrials.push({ pair: pair, rep: r });
+            const shuffled = jsPsych.randomization.shuffle(allSequencePairs);
+            shuffled.forEach(pair => {
+                if (pair && pair.A && pair.B) {
+                    allRepTrials.push({ pair: pair, rep: r });
+                }
             });
         }
+        console.log(`Block ${b + 1}: Generated ${allRepTrials.length} sequence trials.`);
 
         const sequenceTimeline = {
             timeline: [
                 {
                     type: jsPsychHtmlKeyboardResponse,
                     stimulus: function () {
-                        const pair = jsPsych.timelineVariable('pair');
+                        const pair = jsPsych.evaluateTimelineVariable('pair');
+                        if (!pair || !pair.A || !pair.B) {
+                            console.error("Missing pair data in sequence trial:", pair);
+                            return `<p>Error: Stimulus data missing</p>`;
+                        }
                         if (params.show_pairs_together) {
                             return `<div style="display: flex; justify-content: center; align-items: center; gap: 50px;">
                                 <img src="${pair.A.path}" style="width:300px; height:300px; filter: hue-rotate(${pair.A.hue}deg);">
@@ -137,20 +144,22 @@ async function initTask(jsPsych, subject_id) {
                     choices: "NO_KEYS",
                     trial_duration: params.stim_duration,
                     data: function () {
-                        const pair = jsPsych.timelineVariable('pair');
+                        const pair = jsPsych.evaluateTimelineVariable('pair');
+                        if (!pair) return { phase: 'sequence' };
                         return {
                             phase: 'sequence',
                             block: b,
-                            rep: jsPsych.timelineVariable('rep'),
+                            rep: jsPsych.evaluateTimelineVariable('rep'),
                             path: pair.A.path,
                             image_id: pair.A.image_id,
                             target_hue: pair.A.hue,
-                            role: 'A',
-                            pair_b_path: pair.B.path,
+                            role: pair.A.role,
                             condition: pair.A.condition,
                             is_high_frequency: pair.A.is_high_frequency,
                             color_pair_id: pair.A.color_pair_id,
-                            color_pair_hue: pair.A.color_pair_hue
+                            color_pair_hue: pair.A.color_pair_hue,
+                            pair_b_path: pair.B.path,
+                            pair_b_hue: pair.B.hue
                         };
                     }
                 },
@@ -283,11 +292,14 @@ async function initTask(jsPsych, subject_id) {
         const assocTrials = uniqueCueTargetPairs.slice(0, params.n_associative_test_trials);
         assocTrials.forEach(trial => {
             // Foil A: randomly chosen from another pair's A
-            const otherAPairs = allSequencePairs.filter(p => p.A.path !== trial.A.path);
-            const foilA = jsPsych.randomization.sampleWithoutReplacement(otherAPairs, 1)[0].A;
+            const otherAPairs = allSequencePairs.filter(p => p.A && p.A.path !== trial.A.path);
+            const sampledA = jsPsych.randomization.sampleWithoutReplacement(otherAPairs, 1);
+            const foilA = sampledA.length > 0 ? sampledA[0].A : trial.A; // fallback if empty
+
             // Foil B: randomly chosen from another pair's B and NOT the target
-            const otherBPairs = allSequencePairs.filter(p => p.B.path !== trial.B.path && p.B.path !== trial.A.path);
-            const foilB = jsPsych.randomization.sampleWithoutReplacement(otherBPairs, 1)[0].B;
+            const otherBPairs = allSequencePairs.filter(p => p.B && p.B.path !== trial.B.path && p.B.path !== trial.A.path);
+            const sampledB = jsPsych.randomization.sampleWithoutReplacement(otherBPairs, 1);
+            const foilB = sampledB.length > 0 ? sampledB[0].B : trial.B; // fallback if empty
 
             const options = jsPsych.randomization.shuffle([
                 { path: trial.B.path, hue: trial.B.hue, is_correct: true },
@@ -306,8 +318,8 @@ async function initTask(jsPsych, subject_id) {
                     target_path: trial.B.path,
                     cue_path: trial.A.path,
                     condition: trial.A.condition,
-                    foil1_path: options.find(o => !o.is_correct).path,
-                    foil2_path: options.filter(o => !o.is_correct)[1].path
+                    foil1_path: options.find(o => !o.is_correct)?.path || 'missing',
+                    foil2_path: options.filter(o => !o.is_correct)[1]?.path || 'missing'
                 },
                 on_finish: function (data) {
                     data.response_index = data.response; // 0, 1, or 2
@@ -318,30 +330,49 @@ async function initTask(jsPsych, subject_id) {
     }
 
     timeline.push({
-        type: jsPsychHtmlKeyboardResponse,
+        type: jsPsychHtmlButtonResponse,
         stimulus: function () {
             const colorData = jsPsych.data.get().filter({ phase: 'color_test' }).values();
             const assocData = jsPsych.data.get().filter({ phase: 'assoc_test' }).values();
-            const colorAcc = colorData.length > 0 ? colorData.filter(d => d.is_accurate).length / colorData.length : 0;
-            const assocAcc = assocData.length > 0 ? assocData.filter(d => d.is_correct).length / assocData.length : 0;
-            const overallAcc = (colorData.filter(d => d.is_accurate).length + assocData.filter(d => d.is_correct).length) / (colorData.length + assocData.length || 1);
-            const bonus = (overallAcc * params.max_bonus).toFixed(2);
 
-            return `<div style="line-height: 1.6;">
+            const colorHits = colorData.filter(d => d.is_accurate).length;
+            const assocHits = assocData.filter(d => d.is_correct).length;
+            const colorTrials = colorData.length;
+            const assocTrials = assocData.length;
+
+            const totalHits = colorHits + assocHits;
+            const totalTrials = colorTrials + assocTrials;
+            const expectedChanceHits = assocTrials / 3;
+
+            const adjustedAcc = Math.max(0, (totalHits - expectedChanceHits) / (totalTrials - expectedChanceHits || 1));
+            const bonus = (adjustedAcc * params.max_bonus).toFixed(2);
+
+            const colorAcc = colorTrials > 0 ? colorHits / colorTrials : 0;
+            const assocAcc = assocTrials > 0 ? assocHits / assocTrials : 0;
+
+            return `<div style="line-height: 1.6; margin-bottom: 30px;">
                 <h2>Experiment Complete</h2>
                 <p>Color Memory Accuracy: <strong>${(colorAcc * 100).toFixed(1)}%</strong></p>
                 <p>Associative Memory Accuracy: <strong>${(assocAcc * 100).toFixed(1)}%</strong></p>
                 <p>Bonus Earned: <strong>$${bonus}</strong></p>
-                <br><button id="end-btn" class="jspsych-btn">End Experiment</button>
             </div>`;
         },
+        choices: ["End Experiment"],
         data: function () {
             const colorData = jsPsych.data.get().filter({ phase: 'color_test' }).values();
             const assocData = jsPsych.data.get().filter({ phase: 'assoc_test' }).values();
-            const colorAcc = colorData.length > 0 ? colorData.filter(d => d.is_accurate).length / colorData.length : 0;
-            const assocAcc = assocData.length > 0 ? assocData.filter(d => d.is_correct).length / assocData.length : 0;
-            const overallAcc = (colorData.filter(d => d.is_accurate).length + assocData.filter(d => d.is_correct).length) / (colorData.length + assocData.length || 1);
-            const bonus = (overallAcc * params.max_bonus).toFixed(2);
+
+            const colorHits = colorData.filter(d => d.is_accurate).length;
+            const assocHits = assocData.filter(d => d.is_correct).length;
+            const colorTrials = colorData.length;
+            const assocTrials = assocData.length;
+
+            const totalHits = colorHits + assocHits;
+            const totalTrials = colorTrials + assocTrials;
+            const expectedChanceHits = assocTrials / 3;
+
+            const adjustedAcc = Math.max(0, (totalHits - expectedChanceHits) / (totalTrials - expectedChanceHits || 1));
+            const bonus = (adjustedAcc * params.max_bonus).toFixed(2);
 
             const validErrors = colorData.map(d => d.error_deg).filter(e => e !== null && e !== undefined);
             const avg_error = validErrors.length > 0 ? (validErrors.reduce((a, b) => a + b, 0) / validErrors.length).toFixed(1) : 0;
@@ -351,82 +382,25 @@ async function initTask(jsPsych, subject_id) {
                 total_time_min: (jsPsych.getTotalTime() / 60000).toFixed(2),
                 final_avg_error: avg_error,
                 final_bonus_earned: bonus,
-                color_accuracy: colorAcc,
-                assoc_accuracy: assocAcc
+                raw_overall_accuracy: totalHits / (totalTrials || 1),
+                adjusted_accuracy: adjustedAcc,
+                color_accuracy: colorTrials > 0 ? colorHits / colorTrials : 0,
+                assoc_accuracy: assocTrials > 0 ? assocHits / assocTrials : 0
             };
-        },
-        on_load: function () {
-            document.getElementById('end-btn').addEventListener('click', () => {
-                const colorData = jsPsych.data.get().filter({ phase: 'color_test' }).values();
-                const assocData = jsPsych.data.get().filter({ phase: 'assoc_test' }).values();
-                const colorAcc = colorData.length > 0 ? colorData.filter(d => d.is_accurate).length / colorData.length : 0;
-                const assocAcc = assocData.length > 0 ? assocData.filter(d => d.is_correct).length / assocData.length : 0;
-                const overallAcc = (colorData.filter(d => d.is_accurate).length + assocData.filter(d => d.is_correct).length) / (colorData.length + assocData.length || 1);
-                const bonus = (overallAcc * params.max_bonus).toFixed(2);
+        }
+    });
 
-                const validErrors = colorData.map(d => d.error_deg).filter(e => e !== null && e !== undefined);
-                const avg_error = validErrors.length > 0 ? (validErrors.reduce((a, b) => a + b, 0) / validErrors.length).toFixed(1) : 0;
-
-                const summaryResults = {
-                    phase: 'final_summary',
-                    total_time_min: (jsPsych.getTotalTime() / 60000).toFixed(2),
-                    final_avg_error: avg_error,
-                    final_bonus_earned: bonus,
-                    color_accuracy: colorAcc,
-                    assoc_accuracy: assocAcc
-                };
-
-                // CRITICAL: Manually add to data before saving!
-                jsPsych.data.write(summaryResults);
-
-                const isLocal = window.location.protocol === "file:" ||
-                    window.location.hostname === "localhost" ||
-                    window.location.hostname === "127.0.0.1";
-
-                const redirect = () => {
-                    const cc = params.prolific_completion_code || 'unknown';
-                    window.location.href = `https://app.prolific.com/submissions/complete?cc=${cc}`;
-                };
-
-                if (isLocal) {
-                    jsPsych.data.get().localSave('csv', `fifocolor_${subject_id}.csv`);
-                    setTimeout(redirect, 600);
-                } else {
-                    // Update button to show progress
-                    const btn = document.getElementById('end-btn');
-                    btn.disabled = true;
-                    btn.innerHTML = "Saving data, please wait...";
-
-                    fetch("https://pipe.jspsych.org/api/data/", {
-                        method: "POST",
-                        headers: {
-                            "Content-Type": "application/json",
-                        },
-                        body: JSON.stringify({
-                            experiment_id: params.data_pipe_id.trim(),
-                            filename: `${subject_id}.csv`,
-                            data_string: jsPsych.data.get().csv().trim(),
-                        }),
-                    })
-                        .then(response => {
-                            if (response.ok) {
-                                console.log("DataPipe successfully saved:", subject_id);
-                                redirect();
-                            } else {
-                                response.text().then(msg => {
-                                    console.error("DataPipe Reject:", msg);
-                                    btn.innerHTML = `Error ${response.status}: contact admin.`;
-                                    setTimeout(redirect, 6000);
-                                });
-                            }
-                        })
-                        .catch(error => {
-                            console.error("DataPipe network error:", error);
-                            btn.innerHTML = "Network Error. Redirecting in 6s...";
-                            setTimeout(redirect, 6000);
-                        });
-                }
-            });
+    // --- DataPipe Plugin Save Stage ---
+    // This trial handles the OSF upload and then redirects to Prolific
+    timeline.push({
+        type: jsPsychPipe,
+        action: "save",
+        experiment_id: params.data_pipe_id,
+        filename: `${subject_id}.csv`,
+        data_string: () => jsPsych.data.get().csv(),
+        on_finish: function () {
+            const cc = params.prolific_completion_code || 'unknown';
+            window.location.href = `https://app.prolific.com/submissions/complete?cc=${cc}`;
         }
     });
 
@@ -443,7 +417,7 @@ function drawColorWheel(canvas, currentHue = null) {
     const innerPadding = 60;
 
     ctx.clearRect(0, 0, canvas.width, canvas.height);
-    
+
     // Draw wheel ring
     for (let i = 0; i < 360; i++) {
         ctx.beginPath();
@@ -465,7 +439,7 @@ function drawColorWheel(canvas, currentHue = null) {
         const iRad = radius - innerPadding / 2;
         const indicatorX = cx + iRad * Math.cos(radAngle);
         const indicatorY = cy + iRad * Math.sin(radAngle);
-        
+
         ctx.beginPath();
         ctx.arc(indicatorX, indicatorY, innerPadding * 0.3, 0, Math.PI * 2);
         ctx.strokeStyle = "white";
@@ -486,7 +460,7 @@ function setupColorWheelInteraction(canvas, img, onUpdate = null) {
         const rect = canvas.getBoundingClientRect();
         const clientX = e.clientX || (e.touches && e.touches[0].clientX);
         const clientY = e.clientY || (e.touches && e.touches[0].clientY);
-        
+
         const x = clientX - rect.left - cx;
         const y = clientY - rect.top - cy;
         const radius = Math.sqrt(x * x + y * y);
@@ -508,7 +482,7 @@ function setupColorWheelInteraction(canvas, img, onUpdate = null) {
     canvas.addEventListener('mousedown', (e) => handleInput(e));
     window.addEventListener('mousemove', (e) => { if (isDragging) handleInput(e); });
     window.addEventListener('mouseup', stop);
-    
+
     // Support touch
     canvas.addEventListener('touchstart', (e) => { e.preventDefault(); handleInput(e); });
     window.addEventListener('touchmove', (e) => { if (isDragging) handleInput(e); });
