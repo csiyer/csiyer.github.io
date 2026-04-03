@@ -336,7 +336,7 @@ function initTask(jsPsych, subject_id) {
             timeline.push({
                 type: jsPsychHtmlKeyboardResponse,
                 stimulus: `<div style='font-size: 32px; font-weight: bold;'>Attention Check: Press the ${target_label} arrow</div>`,
-                choices: jsPsych.ALL_KEYS,
+                choices: "ALL_KEYS",
                 trial_duration: 5000,
                 data: { is_attention_check: true, correct_key: target_key },
                 on_finish: function (data) {
