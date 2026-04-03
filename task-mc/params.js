@@ -61,6 +61,7 @@ params.instruction_pages = [
         </div>
         <p>At any given time, one of the decks is <b>"lucky"</b> and will tend to give higher rewards.</p>
         <p>The rewards are variable, so you might get a good card from an unlucky deck, or vice versa.</p>
+        <p>And, the lucky deck can switch at any time.</p>
     </div>`,
     `<div class='instruction-container'>
         <p><b>Summary:</b></p>
