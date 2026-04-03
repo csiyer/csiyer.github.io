@@ -325,7 +325,7 @@ function initTask(jsPsych, subject_id) {
                 trial_duration: 5000,
                 data: { is_attention_check: true, correct_key: target_key },
                 on_finish: function (data) {
-                    data.success = (data.response === data.correct_key);
+                    data.success = (data.response || "").toLowerCase() === (data.correct_key || "").toLowerCase();
                 }
             });
 
