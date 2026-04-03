@@ -161,6 +161,10 @@ function initTask(jsPsych, subject_id) {
         right: side_colors_init[1]
     };
 
+    console.log("%c Experiment Initialized", "color: #2E5BFF; font-weight: bold; font-size: 14px;");
+    console.log("Memory-Lucky Deck Color:", mem_lucky_color);
+    const trial_summary = [];
+
     // --- Build Trial List ---
     const high_cat = params.stim_type === 'memorability' ? 'highmem' : 'unique';
     const low_cat = params.stim_type === 'memorability' ? 'lowmem' : 'airplanes';
@@ -196,6 +200,17 @@ function initTask(jsPsych, subject_id) {
                 right: { type: imgType_R, path: imgPath_R }
             }
         };
+
+        trial_summary.push({
+            Trial: i + 1,
+            Lucky_Color: mem_lucky_color,
+            Left_Color: trial_info.colors.left,
+            Left_Reward: trial_info.rewards.left,
+            Left_Type: trial_info.images.left.type,
+            Right_Color: trial_info.colors.right,
+            Right_Reward: trial_info.rewards.right,
+            Right_Type: trial_info.images.right.type
+        });
 
         // 1. Choice Phase
         timeline.push({
@@ -321,7 +336,7 @@ function initTask(jsPsych, subject_id) {
             timeline.push({
                 type: jsPsychHtmlKeyboardResponse,
                 stimulus: `<div style='font-size: 32px; font-weight: bold;'>Attention Check: Press the ${target_label} arrow</div>`,
-                choices: ['arrowup', 'arrowdown'],
+                choices: jsPsych.ALL_KEYS,
                 trial_duration: 5000,
                 data: { is_attention_check: true, correct_key: target_key },
                 on_finish: function (data) {
@@ -338,6 +353,8 @@ function initTask(jsPsych, subject_id) {
             });
         }
     }
+
+    console.table(trial_summary);
 
     // Finishing Screen
     timeline.push({

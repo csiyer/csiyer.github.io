@@ -3,12 +3,12 @@ const params = {
     stim_type: "memorability", // "memorability" or "distinctiveness"
 
     /////////// TIMING ///////////
-    n_trials: 100,
+    n_trials: 86,
     n_attention_checks: 5,
     stimulus_duration: 1500,      // Total view time for decks (ms)
     feedback_duration: 1200,      // Time to show the value and image (ms)
     too_slow_duration: 1200,      // "Too Slow!" message duration
-    iti: 500,                     // Inter-trial interval
+    iti: 1000,                     // Inter-trial interval
 
     /////////// DESIGN ///////////
     rewards: [0.0, 0.2, 0.4, 0.6, 0.8, 1.0],
