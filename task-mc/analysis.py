@@ -106,10 +106,13 @@ def run_analysis(data_dir='data'):
         axes[1, 0].text(0.5, 0.5, 'No Attention Check Data', ha='center')
 
     # --- Plot D: Learning Curve (Key Graph) ---
-    # Prepare data for plotting (Choice of memlucky deck)
-    # is_lucky_choice is a boolean/string saved in data
+    # Prepare data for plotting (Choice of lucky deck)
     df_trials['lucky_choice_bin'] = df_trials['is_lucky_choice'].astype(str).str.lower().map({'true': 1, 'false': 0})
     
+    # Re-calculate trial_index based on sequence per subject (0, 1, 2...)
+    # This avoids conflicts if the CSV 'trial_index' is the global jsPsych counter
+    df_trials['trial_index'] = df_trials.groupby('subject').cumcount()
+
     # Calculate group average per trial
     group_avg = df_trials.groupby('trial_index')['lucky_choice_bin'].mean().rolling(window=10, min_periods=1).mean()
     
