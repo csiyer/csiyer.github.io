@@ -23,7 +23,7 @@ const params = {
     ////////// STUDY STUFF ///////
     completion_time: 7, // in minutes
     data_pipe_id: "a4wEmjxryCAr",
-    prolific_completion_code: "CXXXXXXX", // Replace with actual code
+    prolific_completion_code: "C1G06HKV",
     base_pay: 2,
     max_bonus: 2,
 };
