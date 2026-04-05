@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Memory Card Game</title>
+    <!-- jsPsych v7.3.3 -->
+    <script src="https://unpkg.com/jspsych@7.3.3"></script>
+    <script src="https://unpkg.com/@jspsych/plugin-canvas-keyboard-response@1.1.2"></script>
+    <script src="https://unpkg.com/@jspsych/plugin-html-keyboard-response@1.1.2"></script>
+    <script src="https://unpkg.com/@jspsych/plugin-html-button-response@1.1.2"></script>
+    <script src="https://unpkg.com/@jspsych/plugin-instructions@1.1.3"></script>
+    <script src="https://unpkg.com/@jspsych/plugin-preload@1.1.2"></script>
+    <script src="https://unpkg.com/@jspsych/plugin-fullscreen@1.2.0"></script>
+    <script src="https://unpkg.com/@jspsych-contrib/plugin-pipe@0.3.0"></script>
+
+    <link rel="stylesheet" href="https://unpkg.com/jspsych@7.3.3/css/jspsych.css">
+
+    <!-- Modern Typography -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;700&family=Inter:wght@400;700&display=swap"
+        rel="stylesheet">
+
+    <style>
+        /* Force no scrollbars and center everything */
+        html, body {
+            background-color: #f8f9fa;
+            color: #2d3436;
+            font-family: 'Inter', sans-serif;
+            margin: 0;
+            padding: 0;
+            overflow: hidden !important; /* Extremely important for full-screen tasks */
+            height: 100%;
+            width: 100%;
+        }
+
+        #jspsych-target {
+            height: 100%;
+            width: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden !important;
+        }
+
+        .jspsych-content-wrapper {
+            max-width: 1300px !important;
+            padding: 0 !important;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden !important;
+        }
+
+        canvas {
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            background: white;
+            display: block;
+            margin: auto;
+            max-width: 95vw;
+            max-height: 95vh;
+        }
+
+        .instruction-container {
+            max-width: 800px;
+            text-align: left;
+            line-height: 1.6;
+            background: white;
+            padding: 40px;
+            border-radius: 20px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+            margin: 20px auto;
+        }
+
+        .instruction-container h2,
+        .instruction-container h3 {
+            font-family: 'Outfit', sans-serif;
+            margin-top: 0;
+        }
+
+        .jspsych-btn {
+            background: #2d3436 !important;
+            color: white !important;
+            padding: 12px 30px !important;
+            border-radius: 10px !important;
+            font-weight: bold !important;
+            border: none !important;
+            transition: transform 0.2s ease !important;
+            margin-bottom: 10px;
+        }
+
+        .jspsych-btn:hover {
+            transform: translateY(-2px) !important;
+            background: #000 !important;
+        }
+
+        /* Fixation Cross Styling to prevent scroll */
+        .fixation-cross {
+            font-size: 60px;
+            color: #333;
+            line-height: 1;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100%;
+            width: 100%;
+            pointer-events: none;
+            overflow: hidden;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="jspsych-target"></div>
+
+    <script src="params.js"></script>
+    <script src="task.js"></script>
+    <script>
+        const jsPsych = initJsPsych({
+            display_element: 'jspsych-target'
+        });
+
+        // Initialize Task 2
+        initTask(jsPsych);
+    </script>
+</body>
+
+</html>
