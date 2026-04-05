@@ -9,8 +9,8 @@ const params = {
     max_bonus: 3.00,
 
     // Trial Structure
-    n_trials: 240,
-    n_trials_per_block: 80, // 30s rest between blocks
+    n_trials: 180,
+    n_trials_per_block: 60, // 30s rest between blocks
     break_duration: 30000,
     n_blocks: 3,
 
@@ -31,8 +31,8 @@ const params = {
     max_reversal: 24,
 
     // Episodic Logic
-    old_trial_prob: 0.6,
-    old_window: [10, 30], // Range to look back for repeats
+    old_trial_prob: 0.7, // it will always be lower, due to sampling (0.6 goal)
+    old_window: [9, 30], // Range to look back for repeats
 
     // Manipulation Toggle: 'memorability' or 'distinctiveness'
     stim_type: 'memorability',
@@ -43,7 +43,7 @@ const params = {
     highlight_color: '#2ECC71', // Green for selection
 
     // Remote Save
-    data_pipe_id: "TJB5utBxDQPm",
+    data_pipe_id: "TSYDEicoxR5E",
     prolific_completion_code: "CFNQ0OZB",
 };
 
@@ -57,9 +57,10 @@ params.instruction_pages = [
     `<div class='instruction-container'>
         <h3>How to Play</h3>
         <p>On each trial, you will see two decks of cards: a <b>Blue Deck</b> and an <b>Orange Deck</b>.</p>
+        <p>Each card has an **image** on it that identifies that specific card.</p>
         <div style='display: flex; justify-content: center; gap: 40px; margin: 20px;'>
-            <div style='width: 100px; height: 140px; background: ${params.blue_deck_color}; border-radius: 8px; border: 2px solid white; box-shadow: 0 4px 8px rgba(0,0,0,0.2);'></div>
-            <div style='width: 100px; height: 140px; background: ${params.orange_deck_color}; border-radius: 8px; border: 2px solid white; box-shadow: 0 4px 8px rgba(0,0,0,0.2);'></div>
+            <div style='width: 120px; height: 160px; background: white; border-radius: 12px; border: 8px solid ${params.blue_deck_color}; display: flex; align-items: center; justify-content: center; font-size: 60px;'>&#128522;</div>
+            <div style='width: 120px; height: 160px; background: white; border-radius: 12px; border: 8px solid ${params.orange_deck_color}; display: flex; align-items: center; justify-content: center; font-size: 60px;'>&#128543;</div>
         </div>
         <p>Use the <b>Left</b> and <b>Right</b> arrow keys to choose a card from a deck.</p>
         <p>You have <b>2 seconds</b> to make a choice.</p>
@@ -67,19 +68,18 @@ params.instruction_pages = [
     `<div class='instruction-container'>
         <p>When you choose a card, you will see its value (ranging from $0 to $1).</p>
         <div style='display: flex; justify-content: center; gap: 40px; margin: 25px;'>
-            <!-- Unchosen Blue Deck -->
-            <div style='width: 100px; height: 140px; background: ${params.blue_deck_color}; border-radius: 12px; border: 4px solid ${params.blue_deck_color}; opacity: 0.6; position: relative;'>
-                 <div style='position: absolute; top: 8px; left: 8px; right: 8px; bottom: 8px; background: rgba(0,0,0,0.1); border-radius: 8px;'></div>
-            </div>
-            <!-- Chosen Orange Deck (Reveal) -->
-            <div style='width: 100px; height: 140px; background: white; border-radius: 12px; border: 6px solid ${params.orange_deck_color}; box-shadow: 0 0 15px ${params.highlight_color}; display: flex; align-items: center; justify-content: center; position: relative;'>
-                <div style='position: absolute; top: 10px; left: 10px; right: 10px; bottom: 10px; background: #eee; border-radius: 6px;'></div>
-                <div style='width: 70px; height: 40px; background: white; border: 2px solid ${params.orange_deck_color}; border-radius: 6px; display: flex; align-items: center; justify-content: center; z-index: 1;'>
-                    <b style='color: black; font-size: 1.2rem;'>80&cent</b>
+            <!-- Chosen Blue Deck (Reveal) -->
+            <div style='width: 120px; height: 160px; background: white; border-radius: 12px; border: 10px solid ${params.blue_deck_color}; box-shadow: 0 0 20px ${params.highlight_color}; display: flex; flex-direction: column; align-items: center; justify-content: center; position: relative;'>
+                <div style='font-size: 30px; opacity: 0.3; margin-bottom: 5px;'>&#128522;</div>
+                <div style='width: 80px; height: 50px; background: white; border: 2px solid ${params.blue_deck_color}; border-radius: 8px; display: flex; align-items: center; justify-content: center;'>
+                    <b style='color: black; font-size: 1.4rem;'>80&cent</b>
                 </div>
             </div>
+
+            <!-- Unchosen Orange Deck -->
+            <div style='width: 120px; height: 160px; background: white; border-radius: 12px; border: 8px solid ${params.orange_deck_color}; opacity: 0.4; display: flex; align-items: center; justify-content: center; font-size: 60px;'>&#128543;</div>
         </div>
-        <p>Your goal is to maximize the rewards you get; your bonus will be a a portion of your total rewards.</p>
+        <p>Your goal is to maximize the rewards you get; your bonus will be a portion of your total rewards.</p>
     </div>`,
     `<div class='instruction-container'>
         <h3>Rule 1: The Lucky Deck</h3>
@@ -88,8 +88,27 @@ params.instruction_pages = [
     </div>`,
     `<div class='instruction-container'>
         <h3>Rule 2: Repeated Cards</h3>
-        <p>Each card also has an image on it. Sometimes, you will encounter a card with an image you have <b>seen before</b>.</p>
-        <p>A card will <b>always be worth the same amount</b> as the first time you saw it, regardless of which deck it appears in or whether that deck is currently lucky.</p>
+        <p>Each card has a **unique image**. Sometimes, you will encounter a card you have **seen before**.</p>
+        <p>A card will <b>always be worth the same amount</b> as the first time you saw it, regardless of its deck color or luck.</p>
+        
+        <div style='display: flex; align-items: center; justify-content: center; gap: 20px; margin: 30px 0;'>
+             <!-- First Encounter -->
+             <div style='display: flex; align-items: center; gap: 10px;'>
+                 <div style='width: 80px; height: 110px; background: white; border-radius: 8px; border: 4px solid ${params.blue_deck_color}; display: flex; align-items: center; justify-content: center; font-size: 40px;'>&#128522;</div>
+                 <div style='font-size: 24px;'>&rarr;</div>
+                 <div style='width: 80px; height: 110px; background: white; border-radius: 8px; border: 4px solid ${params.blue_deck_color}; display: flex; align-items: center; justify-content: center; font-size: 24px; font-weight: bold;'>80&cent;</div>
+             </div>
+
+             <div style='font-size: 0.9rem; color: #95a5a6; font-style: italic; margin: 0 10px;'>(later...)</div>
+
+             <!-- Second Encounter -->
+             <div style='display: flex; align-items: center; gap: 10px;'>
+                 <div style='width: 80px; height: 110px; background: white; border-radius: 8px; border: 4px solid ${params.orange_deck_color}; display: flex; align-items: center; justify-content: center; font-size: 40px;'>&#128522;</div>
+                 <div style='font-size: 24px;'>&rarr;</div>
+                 <div style='width: 80px; height: 110px; background: white; border-radius: 8px; border: 4px solid ${params.orange_deck_color}; display: flex; align-items: center; justify-content: center; font-size: 24px; font-weight: bold;'>80&cent;</div>
+             </div>
+        </div>
+        
         <p>Use your memory to help you pick high-value cards you've seen before!</p>
     </div>`,
     `<div class='instruction-container'>
