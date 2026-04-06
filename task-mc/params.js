@@ -34,6 +34,12 @@ params.instruction_pages = [
         <p>This will take around <strong> ${params.completion_time} minutes</strong>.</p>
         <p>You will earn a base pay of <b>$${params.base_pay}</b> for completing the task, and a portion of your total winnings as a <b>bonus of up to $${params.max_bonus}</b>!</p>
     </div>`,
+    `<div class='instruction-container' style='max-width: 900px;'>
+        <h2 style="color: #333333;">Consent Form</h2>
+        <p>Before we begin, please review the consent form below. You can also download a copy <a href="../files/online_consent_form.pdf" target="_blank" style="color: ${params.blue_deck_color}; font-weight: bold; text-decoration: underline;">here</a>.</p>
+        <iframe src="../files/online_consent_form.pdf" width="100%" height="600px" style="border: 1px solid #eee; border-radius: 8px; margin-top: 10px;"></iframe>
+        <p style="margin-top: 20px;">By clicking "Next", you confirm that you have read the form and voluntarily agree to participate in this study.</p>
+    </div>`,
     `<div class='instruction-container'>
         <p>In this task, you will be playing a game with two decks of cards: a <b>Blue</b> deck and an <b>Orange</b> deck.</p>
         <p>On each trial, you will see two cards face down. Each card has a different <b>image</b> on its back.</p>

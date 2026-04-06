@@ -36,7 +36,7 @@ const params = {
     old_window: [9, 30], // Range to look back for repeats
 
     // Manipulation Toggle: 'memorability' or 'distinctiveness'
-    stim_type: 'memorability',
+    stim_type: 'distinctiveness',
 
     // UI Styling
     blue_deck_color: '#4A90E2',
@@ -54,6 +54,12 @@ params.instruction_pages = [
         <p>In this experiment, you will play a game where your goal is to win as much money as possible.</p>
         <p>You will earn a base pay of $${params.base_pay.toFixed(2)} and can earn up to <b>$${params.max_bonus.toFixed(2)} in bonus money</b>!</p>
         <p>The game consists of 3 blocks, with a break between each block.</p>
+    </div>`,
+    `<div class='instruction-container' style='max-width: 900px;'>
+        <h3 style="color: #2c3e50;">Consent Form</h3>
+        <p>Before we begin, please review the consent form below. You can also download a copy <a href="../files/online_consent_form.pdf" target="_blank" style="color: ${params.blue_deck_color}; font-weight: bold; text-decoration: underline;">here</a>.</p>
+        <iframe src="../files/online_consent_form.pdf" width="100%" height="600px" style="border: 1px solid #eee; border-radius: 8px; margin-top: 10px;"></iframe>
+        <p style="margin-top: 20px;">By clicking "Next", you confirm that you have read the form and voluntarily agree to participate in this study.</p>
     </div>`,
     `<div class='instruction-container'>
         <h3>How to Play</h3>
