@@ -59,7 +59,7 @@ function generate_reversals(n_trials) {
 }
 
 function repopulate_color_pool(color) {
-    const dist = params.reward_dist[deck_lucks[color]];
+    const dist = params[`${deck_lucks[color]}_reward_dist`];
     // 2x repetition (40 items total) to improve matching availability (Step 3)
     reward_pools[color] = jsPsych.randomization.repeat(dist, 2);
 }
