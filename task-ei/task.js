@@ -59,6 +59,7 @@ function generate_reversals(n_trials) {
 }
 
 function repopulate_color_pool(color) {
+    console.log('repopulate_color_pool', color, deck_lucks[color]);
     const counts = params[`${deck_lucks[color]}_reward_dist`];
     let pool = [];
     counts.forEach((count, i) => {
