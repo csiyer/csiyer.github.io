@@ -67,8 +67,8 @@ function repopulate_color_pool(color) {
         }
     });
 
-    // 2x repetition (40 items total) to improve matching availability (Step 3)
-    reward_pools[color] = jsPsych.randomization.shuffle(jsPsych.randomization.repeat(pool, 2));
+    // Shuffle pool per color
+    reward_pools[color] = jsPsych.randomization.shuffle(pool);
 }
 
 function initTask(jsPsych) {
@@ -429,7 +429,7 @@ function initTask(jsPsych) {
             const trials = jsPsych.data.get().filter({ is_trial: true });
             if (trials.count() === 0) return "<div class='instruction-container'><h2>Game Over!</h2><p>No trials completed.</p></div>";
             const avg_reward = trials.select('reward').mean();
-            const bonus_raw = (avg_reward - 0.50) / (0.70 - 0.50) * params.max_bonus;
+            const bonus_raw = (avg_reward - 0.50) / (0.63 - 0.50) * params.max_bonus;
             const final_bonus = Math.max(0, Math.min(params.max_bonus, bonus_raw)).toFixed(2);
             return `<div class='instruction-container'>
                 <h2>Game Over!</h2>
@@ -443,7 +443,7 @@ function initTask(jsPsych) {
             const trials = jsPsych.data.get().filter({ is_trial: true });
             if (trials.count() > 0) {
                 const avg_reward = trials.select('reward').mean();
-                const bonus_raw = (avg_reward - 0.50) / (0.70 - 0.50) * params.max_bonus;
+                const bonus_raw = (avg_reward - 0.50) / (0.63 - 0.50) * params.max_bonus;
                 data.final_bonus = Math.max(0, Math.min(params.max_bonus, bonus_raw)).toFixed(2);
                 data.is_summary = true;
             }

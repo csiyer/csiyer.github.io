@@ -22,9 +22,10 @@ const params = {
 
     // Incremental Logic
     // lucky_reward_dist: counts of [$0, $0.2, $0.4, $0.6, $0.8, $1.0]
-    // (1*0.0 + 2*0.2 + 3*0.4 + 5*0.6 + 5*0.8 + 4*1.0) / 20 = 0.63
-    lucky_reward_dist: [1, 2, 3, 5, 5, 4],
-    unlucky_reward_dist: [4, 5, 5, 3, 2, 1], // mean = 0.37
+    // Matches Raphael's MATLAB distribution: 2:7 and 7:-1:2
+    // mean = (2*0.0 + 3*0.2 + 4*0.4 + 5*0.6 + 6*0.8 + 7*1.0) / 27 = 0.63 vs. 0.37
+    lucky_reward_dist: [2, 3, 4, 5, 6, 7],
+    unlucky_reward_dist: [7, 6, 5, 4, 3, 2], // mean = 0.37
 
     // Reversals
     min_reversal: 16,
@@ -44,7 +45,7 @@ const params = {
 
     // Remote Save
     data_pipe_id: "TSYDEicoxR5E",
-    prolific_completion_code: "CFNQ0OZB",
+    prolific_completion_code: "C1B3YYAS",
 };
 
 params.instruction_pages = [
