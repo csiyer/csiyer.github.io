@@ -59,7 +59,6 @@ function generate_reversals(n_trials) {
 }
 
 function repopulate_color_pool(color) {
-    console.log('repopulate_color_pool', color, deck_lucks[color]);
     const counts = params[`${deck_lucks[color]}_reward_dist`];
     let pool = [];
     counts.forEach((count, i) => {
@@ -82,6 +81,7 @@ function initTask(jsPsych) {
 
     jsPsych.data.addProperties({
         subject_id: subject_id,
+        prolific_id: subject_id,
         study_id: study_id,
         session_id: session_id,
         experiment_id: params.experiment_id,
@@ -445,6 +445,7 @@ function initTask(jsPsych) {
                 const avg_reward = trials.select('reward').mean();
                 const bonus_raw = (avg_reward - 0.50) / (0.70 - 0.50) * params.max_bonus;
                 data.final_bonus = Math.max(0, Math.min(params.max_bonus, bonus_raw)).toFixed(2);
+                data.is_summary = true;
             }
         }
     });

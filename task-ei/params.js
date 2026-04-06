@@ -57,7 +57,7 @@ params.instruction_pages = [
     `<div class='instruction-container'>
         <h3>How to Play</h3>
         <p>On each trial, you will see two decks of cards: a <b>Blue Deck</b> and an <b>Orange Deck</b>.</p>
-        <p>Each card has an **image** on it that identifies that specific card.</p>
+        <p>Each card has an <strong>image</strong> on it that identifies that specific card.</p>
         <div style='display: flex; justify-content: center; gap: 40px; margin: 20px;'>
             <div style='width: 120px; height: 160px; background: white; border-radius: 12px; border: 8px solid ${params.blue_deck_color}; display: flex; align-items: center; justify-content: center; font-size: 60px;'>&#128522;</div>
             <div style='width: 120px; height: 160px; background: white; border-radius: 12px; border: 8px solid ${params.orange_deck_color}; display: flex; align-items: center; justify-content: center; font-size: 60px;'>&#128543;</div>
@@ -88,7 +88,7 @@ params.instruction_pages = [
     </div>`,
     `<div class='instruction-container'>
         <h3>Rule 2: Repeated Cards</h3>
-        <p>Each card has a **unique image**. Sometimes, you will encounter a card you have **seen before**.</p>
+        <p>Each card has a <strong>unique image</strong>. Sometimes, you will encounter a card you have <strong>seen before</strong>.</p>
         <p>A card will <b>always be worth the same amount</b> as the first time you saw it, regardless of its deck color or luck.</p>
         
         <div style='display: flex; align-items: center; justify-content: center; gap: 20px; margin: 30px 0;'>
