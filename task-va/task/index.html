@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Card Value Memory Experiment</title>
+
+    <script src="https://unpkg.com/jspsych@8.2.3"></script>
+    <script src="https://unpkg.com/@jspsych/plugin-instructions@2.1.0"></script>
+    <script src="https://unpkg.com/@jspsych/plugin-html-keyboard-response@2.1.0"></script>
+    <script src="https://unpkg.com/@jspsych/plugin-html-button-response@2.1.0"></script>
+    <script src="https://unpkg.com/@jspsych/plugin-canvas-keyboard-response@2.1.0"></script>
+    <script src="https://unpkg.com/@jspsych/plugin-preload@2.1.0"></script>
+    <script src="https://unpkg.com/@jspsych/plugin-fullscreen@2.0.0"></script>
+    <script src="https://unpkg.com/@jspsych-contrib/plugin-pipe@0.5.0"></script>
+    <link rel="stylesheet" href="https://unpkg.com/jspsych@8.2.3/css/jspsych.css">
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+
+    <style>
+        :root {
+            --bg-color: #ececec;
+            --text-color: #333333;
+            --panel-bg: rgba(255, 255, 255, 0.95);
+            --panel-shadow: 0 14px 36px rgba(0, 0, 0, 0.08);
+            --card-accent: #8c9299;
+            --card-highlight: #cfd4da;
+        }
+
+        body {
+            margin: 0;
+            min-height: 100vh;
+            background: radial-gradient(circle at top, #fafafa 0%, #ececec 58%, #dfdfdf 100%);
+            color: var(--text-color);
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+        }
+
+        .jspsych-content-wrapper {
+            max-width: 1240px;
+        }
+
+        .instruction-container,
+        .memory-panel {
+            max-width: 860px;
+            margin: 0 auto;
+            padding: 36px 42px;
+            background: var(--panel-bg);
+            border-radius: 20px;
+            box-shadow: var(--panel-shadow);
+            text-align: left;
+            line-height: 1.65;
+        }
+
+        .instruction-container h2,
+        .memory-panel h2 {
+            margin: 0 0 16px;
+            font-family: 'Inter', sans-serif;
+            font-weight: 800;
+            color: #171717;
+        }
+
+        .jspsych-btn {
+            padding: 12px 24px;
+            font-size: 1rem;
+            font-weight: 700;
+            border: none;
+            border-radius: 999px;
+            background: #171717;
+            color: #ffffff;
+            box-shadow: 0 8px 18px rgba(0, 0, 0, 0.12);
+        }
+
+        .jspsych-btn:hover {
+            transform: translateY(-1px);
+        }
+
+        canvas {
+            display: block;
+            margin: 0 auto;
+            border-radius: 24px;
+            background: rgba(255, 255, 255, 0.42);
+            box-shadow: inset 0 0 16px rgba(0, 0, 0, 0.05);
+        }
+
+        .instruction-card-row {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 28px;
+            margin: 24px 0;
+        }
+
+        .mini-card {
+            width: 100px;
+            height: 140px;
+            border-radius: 14px;
+            background: linear-gradient(145deg, #b8bdc4 0%, #8c9299 100%);
+            border: 4px solid #ffffff;
+            box-shadow: 0 12px 22px rgba(0, 0, 0, 0.12);
+            position: relative;
+        }
+
+        .mini-card::after {
+            content: "?";
+            position: absolute;
+            inset: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: 'Inter', sans-serif;
+            font-size: 2.6rem;
+            font-weight: 800;
+            color: rgba(255, 255, 255, 0.92);
+        }
+
+        .mini-card.revealed {
+            background: #ffffff;
+            border-color: var(--card-accent);
+            box-shadow: 0 0 0 6px rgba(255, 235, 59, 0.28);
+        }
+
+        .mini-card.revealed::after {
+            content: "$1";
+            color: #171717;
+            font-size: 1.7rem;
+        }
+
+        .memory-mini-demo {
+            width: 340px;
+            margin: 22px auto 18px;
+            text-align: center;
+        }
+
+        .memory-mini-demo .mini-card {
+            margin: 0 auto;
+        }
+
+        .memory-instruction-values {
+            margin-top: 16px;
+            display: grid;
+            grid-template-columns: repeat(6, 1fr);
+            gap: 10px;
+            align-items: center;
+            justify-items: center;
+            color: #5b6269;
+        }
+
+        .memory-instruction-values span {
+            font-size: 0.95rem;
+            font-weight: 400;
+            white-space: nowrap;
+        }
+
+        .memory-keyboard-values,
+        .memory-keyboard-keys {
+            max-width: 620px;
+            margin-left: auto;
+            margin-right: auto;
+            display: grid;
+            grid-template-columns: repeat(6, 1fr);
+            gap: 16px;
+            justify-items: center;
+            align-items: center;
+        }
+
+        .memory-keyboard-values {
+            margin-top: 8px;
+            color: #2f3439;
+        }
+
+        .memory-keyboard-values span {
+            font-size: 1.35rem;
+            font-weight: 700;
+            white-space: nowrap;
+        }
+
+        .memory-keyboard-keys {
+            margin-top: 6px;
+            color: #646b73;
+        }
+
+        .memory-keyboard-keys span {
+            font-size: 1.1rem;
+            font-weight: 600;
+            white-space: nowrap;
+        }
+
+        .memory-panel {
+            text-align: center;
+        }
+
+        .memory-card-shell {
+            margin: 8px auto 18px;
+            width: 320px;
+            padding: 20px;
+            background: linear-gradient(180deg, #f4f5f6 0%, #ffffff 100%);
+            border-radius: 28px;
+            box-shadow: 0 18px 36px rgba(0, 0, 0, 0.1);
+        }
+
+        .memory-card {
+            width: 280px;
+            height: 390px;
+            margin: 0 auto;
+            background: #ffffff;
+            border: 8px solid var(--card-accent);
+            border-radius: 22px;
+            box-shadow: 0 0 0 8px rgba(255, 235, 59, 0.2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+        }
+
+        .memory-card img {
+            width: calc(100% - 28px);
+            height: calc(100% - 28px);
+            object-fit: contain;
+            border-radius: 14px;
+            background: #fafafa;
+        }
+
+        .memory-prompt {
+            margin: 10px 0 22px;
+            font-size: 1.08rem;
+        }
+
+        .attention-check {
+            max-width: 720px;
+            margin: 0 auto;
+            padding: 34px 38px;
+            background: var(--panel-bg);
+            border-radius: 20px;
+            box-shadow: var(--panel-shadow);
+            text-align: center;
+        }
+    </style>
+</head>
+
+<body>
+    <script src="params.js"></script>
+    <script src="../../stimuli/_stimuli_metadata.js"></script>
+    <script src="task.js"></script>
+    <script>
+        const jsPsych = initJsPsych({
+            on_finish: function () {
+                // Final redirect is handled in the task timeline.
+            }
+        });
+
+        document.documentElement.style.setProperty('--bg-color', params.background_color);
+        document.documentElement.style.setProperty('--text-color', params.text_color);
+        document.documentElement.style.setProperty('--card-accent', params.card_color);
+        document.documentElement.style.setProperty('--card-highlight', params.highlight_color);
+        document.body.style.backgroundColor = params.background_color;
+
+        const subject_id = jsPsych.randomization.randomID(10);
+        jsPsych.data.addProperties({
+            subject_id: subject_id,
+            prolific_id: jsPsych.data.getURLVariable('PROLIFIC_PID') || 'local',
+            study_id: jsPsych.data.getURLVariable('STUDY_ID') || 'local',
+            session_id: jsPsych.data.getURLVariable('SESSION_ID') || 'local'
+        });
+
+        initTask(jsPsych, subject_id);
+    </script>
+</body>
+
+</html>
