@@ -485,7 +485,7 @@ function drawCard(ctx, x, y, width, height, image, valueLabel = null, isSelected
 function loadStimulusMetadata() {
     const rows = window.STIMULI_METADATA;
     if (!Array.isArray(rows) || rows.length === 0) {
-        throw new Error("Stimulus metadata is missing. Make sure ../../stimuli/_stimuli_metadata.js is loaded.");
+        throw new Error("Stimulus metadata is missing. Make sure ../../stimuli/stimulimetadata.js is loaded.");
     }
     return rows;
 }

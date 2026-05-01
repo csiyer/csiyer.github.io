@@ -26,7 +26,7 @@ const params = {
 
     consent_pdf: "https://csiyer.github.io/files/online_consent_form.pdf",
     stimuli_dir: "../../stimuli/images",
-    stimuli_metadata_path: "../../stimuli/_stimuli_metadata.js",
+    stimuli_metadata_path: "../../stimuli/stimulimetadata.js",
 };
 
 params.instruction_pages = [

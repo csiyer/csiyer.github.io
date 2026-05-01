@@ -414,7 +414,7 @@ function loadStimulusMetadata() {
     const rows = window.STIMULI_METADATA;
     if (!Array.isArray(rows) || rows.length === 0) {
         throw new Error(
-            "Stimulus metadata is missing. Make sure _stimuli_metadata.js is present and loaded before task.js."
+            "Stimulus metadata is missing. Make sure stimulimetadata.js is present and loaded before task.js."
         );
     }
 
