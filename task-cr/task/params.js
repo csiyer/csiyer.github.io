@@ -1,5 +1,5 @@
 const params = {
-    experiment_id: "episodic_choice_v3",
+    experiment_id: "episodic_recognition_v1",
 
     n_trials: 312,
     n_blocks: 3,
@@ -14,7 +14,6 @@ const params = {
     // Timing (ms)
     max_stimulus_duration: 2000,
     highlight_duration: 1000,
-    feedback_duration: 1500,
     too_slow_duration: 1500,
     iti: 500,
     break_duration: 20000,
@@ -26,7 +25,7 @@ const params = {
     completion_time: 20,
     base_pay: 4,
     max_bonus: 1,
-    bonus_sample_n: 10,
+    bonus_chance_accuracy: 0.5,
     data_pipe_id: "0eMBjYEVa3qX",
     osf_project_id: "2cm34",
     osf_component_id: "8d2cb",

@@ -21,6 +21,85 @@ if (typeof CanvasRenderingContext2D.prototype.roundRect !== "function") {
 const IMAGE_CACHE = {};
 const MEMORY_RESPONSE_KEYS = ["s", "d", "f", "j", "k", "l"];
 
+function getFeedbackImagePath(value) {
+    if (value === 1 || value === 1.0) return `${params.feedback_dir}/1d.jpeg`;
+    return `${params.feedback_dir}/${Math.round(value * 100)}c.jpeg`;
+}
+
+function formatPossibleValues() {
+    return params.possible_values.map((value) => formatValue(value)).join(", ");
+}
+
+function buildFullscreenMessage() {
+    return `<div class="instruction-container" style="max-width:920px;">
+        <h2>Welcome!</h2>
+        <p>This study takes about <strong>${params.completion_time} minutes</strong>. You will earn <strong>$${params.base_pay}</strong> plus a bonus of up to <strong>$${params.max_bonus}</strong>.</p>
+        <p>Please review the consent form below, and feel free to download a copy for your records.</p>
+        <iframe src="${params.consent_pdf}" width="100%" height="480"
+            style="border:1px solid #e8e8e8; border-radius:10px; margin:10px 0;"></iframe>
+        <p>By clicking the button below, you confirm that you have read and voluntarily agree to participate.</p>
+    </div>`;
+}
+
+function buildInstructionPages() {
+    const allVals = formatPossibleValues();
+    const blank = `${params.feedback_dir}/blank.jpeg`;
+    const banana = `${params.instructions_img_dir}/banana_13s.jpg`;
+    const car = `${params.instructions_img_dir}/car_01b.jpg`;
+    const maxFeedback = getFeedbackImagePath(Math.max(...params.possible_values));
+
+    const objectCard = (imagePath, extraClass = "") => `
+        <div class="ins-card ins-card-sm${extraClass}">
+            <img class="ins-card-bg" src="${blank}">
+            <img class="ins-card-obj" src="${imagePath}">
+        </div>`;
+
+    const feedbackDemo = `
+        <div class="ins-feedback-demo">
+            <div class="ins-screen">
+                ${objectCard(banana)}
+            </div>
+            <div class="ins-arrow">→</div>
+            <div class="ins-screen">
+                <div class="ins-card ins-card-sm">
+                    <img class="ins-card-bg" src="${maxFeedback}">
+                </div>
+            </div>
+        </div>`;
+
+    const memoryDemo = `
+        <div class="ins-memory-demo">
+            ${objectCard(car)}
+            <div class="memory-instruction-values">
+                ${params.possible_values.map((value) => `<span>${formatValue(value)}</span>`).join("")}
+            </div>
+        </div>`;
+
+    return [
+        `<div class="instruction-container">
+            <h2>Part 1: Value Learning</h2>
+            <p>You will see a series of cards with images on them. Each card will then show how much it is worth.</p>
+            ${feedbackDemo}
+            <p>Your job is to learn each card's value. The possible card values are: <strong>${allVals}</strong></p>
+        </div>`,
+        `<div class="instruction-container">
+            <h2>Part 2: Memory Test</h2>
+            <p>After the learning phase, you will do a memory test for the value of each card.</p>
+            ${memoryDemo}
+            <p>Your bonus depends on how many exact values you remember correctly.</p>
+            <p><strong>Use the keys 's', 'd', 'f', 'j', 'k', and 'l' to report each card's value.</strong></p>
+        </div>`,
+        `<div class="instruction-container">
+            <h2>Summary</h2>
+            <ul>
+                <li>First, learn the value of each card when it is shown.</li>
+                <li>Then, report the remembered value of each card during the memory test.</li>
+                <li>Try your best: your bonus depends on your memory accuracy.</li>
+            </ul>
+        </div>`,
+    ];
+}
+
 async function initTask(jsPsych, subject_id) {
     const timeline = [];
 
@@ -34,6 +113,13 @@ async function initTask(jsPsych, subject_id) {
 
     const selectedStimuli = jsPsych.randomization.sampleWithoutReplacement(stimulusPool, params.n_trials);
     const selectedImages = selectedStimuli.map((stimulus) => stimulus.image_path);
+    const feedbackImages = params.possible_values.map((value) => getFeedbackImagePath(value));
+    const instructionImages = [
+        `${params.feedback_dir}/blank.jpeg`,
+        `${params.instructions_img_dir}/banana_13s.jpg`,
+        `${params.instructions_img_dir}/car_01b.jpg`,
+    ];
+    const allImages = [...new Set([...selectedImages, ...feedbackImages, ...instructionImages])];
     const shuffledValues = [];
     while (shuffledValues.length < params.n_trials) {
         shuffledValues.push(...jsPsych.randomization.shuffle([...params.possible_values]));
@@ -72,10 +158,10 @@ async function initTask(jsPsych, subject_id) {
 
     timeline.push({
         type: jsPsychPreload,
-        images: selectedImages,
+        images: allImages,
         message: "Loading card images...",
         on_finish: function () {
-            selectedImages.forEach((path) => {
+            allImages.forEach((path) => {
                 const img = new Image();
                 img.src = path;
                 IMAGE_CACHE[path] = img;
@@ -86,16 +172,16 @@ async function initTask(jsPsych, subject_id) {
     timeline.push({
         type: jsPsychFullscreen,
         fullscreen_mode: true,
-        message: params.instruction_pages[0],
+        message: buildFullscreenMessage(),
         button_label: "Enter fullscreen & begin"
     });
 
     timeline.push({
         type: jsPsychInstructions,
-        pages: params.instruction_pages.slice(1),
+        pages: buildInstructionPages(),
         show_clickable_nav: true,
         button_label_next: "Next",
-        button_label_previous: "Back"
+        button_label_previous: "Back",
     });
 
     timeline.push({
@@ -114,7 +200,7 @@ async function initTask(jsPsych, subject_id) {
             type: jsPsychCanvasKeyboardResponse,
             canvas_size: [850, 1200],
             choices: "NO_KEYS",
-            trial_duration: params.learning_preview_duration + params.flip_duration + params.revealed_duration,
+            trial_duration: params.learning_preview_duration + params.revealed_duration,
             data: {
                 phase: "encoding",
                 is_learning_trial: true,
@@ -293,10 +379,9 @@ async function initTask(jsPsych, subject_id) {
 function runLearningAnimation(ctx, trial) {
     const canvasWidth = ctx.canvas.width;
     const canvasHeight = ctx.canvas.height;
-    const cardWidth = 380;
-    const cardHeight = 540;
-    const cardX = (canvasWidth - cardWidth) / 2;
-    const cardY = (canvasHeight - cardHeight) / 2;
+    const cardSize = 440;
+    const cardX = (canvasWidth - cardSize) / 2;
+    const cardY = (canvasHeight - cardSize) / 2;
     const startTime = performance.now();
 
     function animate(now) {
@@ -304,20 +389,12 @@ function runLearningAnimation(ctx, trial) {
         ctx.clearRect(0, 0, canvasWidth, canvasHeight);
 
         if (elapsed < params.learning_preview_duration) {
-            drawCardFace(ctx, cardX, cardY, cardWidth, cardHeight, IMAGE_CACHE[trial.image_path]);
+            drawCardFace(ctx, cardX, cardY, cardSize, IMAGE_CACHE[trial.image_path]);
         } else {
-            const flipElapsed = elapsed - params.learning_preview_duration;
-            const progress = Math.min(flipElapsed / params.flip_duration, 1);
-            if (progress < 0.5) {
-                const hScale = Math.max(0.02, 1 - progress * 2);
-                drawCardFace(ctx, cardX, cardY, cardWidth, cardHeight, IMAGE_CACHE[trial.image_path], null, hScale);
-            } else {
-                const hScale = Math.max(0.02, (progress - 0.5) * 2);
-                drawRevealedCard(ctx, cardX, cardY, cardWidth, cardHeight, IMAGE_CACHE[trial.image_path], trial.value_label, hScale);
-            }
+            drawFeedbackCard(ctx, cardX, cardY, cardSize, IMAGE_CACHE[getFeedbackImagePath(trial.value)]);
         }
 
-        if (elapsed < params.learning_preview_duration + params.flip_duration + params.revealed_duration) {
+        if (elapsed < params.learning_preview_duration + params.revealed_duration) {
             requestAnimationFrame(animate);
         }
     }
@@ -329,69 +406,43 @@ function drawBlankLearningIntertrial(ctx) {
     ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
 }
 
-function drawCardFace(ctx, x, y, width, height, image, text = null, hScale = 1) {
+function drawCardFace(ctx, x, y, size, image, hScale = 1) {
     ctx.save();
-    ctx.translate(x + width / 2, y + height / 2);
+    ctx.translate(x + size / 2, y + size / 2);
     ctx.scale(hScale, 1);
-    ctx.translate(-width / 2, -height / 2);
-
-    ctx.fillStyle = "#ffffff";
-    ctx.beginPath();
-    ctx.roundRect(0, 0, width, height, 22);
-    ctx.fill();
-
-    ctx.strokeStyle = params.card_color;
-    ctx.lineWidth = 10;
-    ctx.shadowBlur = 0;
-    ctx.stroke();
-
-    const innerGradient = ctx.createLinearGradient(0, 0, width, height);
-    innerGradient.addColorStop(0, "#f3f4f5");
-    innerGradient.addColorStop(1, "#e5e7ea");
-    ctx.fillStyle = innerGradient;
-    ctx.beginPath();
-    ctx.roundRect(24, 24, width - 48, height - 48, 16);
-    ctx.fill();
-
-    if (image && image.complete) {
-        const padding = 34;
-        const maxW = width - padding * 2;
-        const maxH = height - padding * 2;
-        const scale = Math.min(maxW / image.naturalWidth, maxH / image.naturalHeight);
-        const drawW = image.naturalWidth * scale;
-        const drawH = image.naturalHeight * scale;
-        ctx.drawImage(image, (width - drawW) / 2, (height - drawH) / 2, drawW, drawH);
-    }
-
-    if (text) {
-        const boxW = 180;
-        const boxH = 104;
-        const boxX = (width - boxW) / 2;
-        const boxY = (height - boxH) / 2;
-
-        ctx.fillStyle = "rgba(255, 255, 255, 0.96)";
-        ctx.strokeStyle = params.card_color;
-        ctx.lineWidth = 4;
-        ctx.beginPath();
-        ctx.roundRect(boxX, boxY, boxW, boxH, 14);
-        ctx.fill();
-        ctx.stroke();
-
-        ctx.fillStyle = "#111111";
-        ctx.font = "bold 54px Inter";
-        ctx.textAlign = "center";
-        ctx.textBaseline = "middle";
-        ctx.fillText(text, width / 2, height / 2 + 2);
-    }
-
+    ctx.translate(-size / 2, -size / 2);
+    drawObjectCard(ctx, 0, 0, size, image);
     ctx.restore();
 }
 
-function drawRevealedCard(ctx, x, y, width, height, image, valueLabel, hScale = 1) {
+function drawObjectCard(ctx, x, y, size, image) {
+    const blankImage = IMAGE_CACHE[`${params.feedback_dir}/blank.jpeg`];
+    if (blankImage && blankImage.complete) {
+        ctx.drawImage(blankImage, x, y, size, size);
+    } else {
+        ctx.fillStyle = "#d0d3d7";
+        ctx.fillRect(x, y, size, size);
+    }
+
+    if (image && image.complete) {
+        const pad = size * 0.14;
+        const maxW = size - pad * 2;
+        const maxH = size - pad * 2;
+        const scale = Math.min(maxW / image.naturalWidth, maxH / image.naturalHeight);
+        const drawW = image.naturalWidth * scale;
+        const drawH = image.naturalHeight * scale;
+        ctx.drawImage(image, x + (size - drawW) / 2, y + (size - drawH) / 2, drawW, drawH);
+    }
+}
+
+function drawFeedbackCard(ctx, x, y, size, feedbackImage, hScale = 1) {
     ctx.save();
-    ctx.shadowBlur = 18;
-    ctx.shadowColor = params.highlight_color;
-    drawCardFace(ctx, x, y, width, height, image, valueLabel, hScale);
+    ctx.translate(x + size / 2, y + size / 2);
+    ctx.scale(hScale, 1);
+    ctx.translate(-size / 2, -size / 2);
+    if (feedbackImage && feedbackImage.complete) {
+        ctx.drawImage(feedbackImage, 0, 0, size, size);
+    }
     ctx.restore();
 }
 
@@ -402,7 +453,8 @@ function buildMemoryStimulus(trial, memoryIndex) {
     return `<div class="memory-panel">
         <div class="memory-card-shell">
             <div class="memory-card">
-                <img src="${trial.image_path}" alt="Card image ${memoryIndex + 1}">
+                <img class="memory-card-bg" src="${params.feedback_dir}/blank.jpeg" alt="">
+                <img class="memory-card-obj" src="${trial.image_path}" alt="Card image ${memoryIndex + 1}">
             </div>
         </div>
         <div class="memory-keyboard-values">${valueRow}</div>
@@ -414,7 +466,7 @@ function loadStimulusMetadata() {
     const rows = window.STIMULI_METADATA;
     if (!Array.isArray(rows) || rows.length === 0) {
         throw new Error(
-            "Stimulus metadata is missing. Make sure stimulimetadata.js is present and loaded before task.js."
+            "Stimulus metadata is missing. Make sure stimuli_metadata.js is present and loaded before task.js."
         );
     }
 

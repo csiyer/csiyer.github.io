@@ -24,39 +24,9 @@ const IMAGE_CACHE = {};
 const TASK_STATE = {
     plan: null,
     currentTrial: null,
-    lastChosenSide: null,   // 'left' | 'right' | null (if missed)
-    autoSide: null,          // side used for feedback when no response
-    sourceChoiceByTrial: new Map(),
-    bonusSummary: null,
+    lastChosenSide: null,
+    responseMade: false,
 };
-
-// ─── Value helpers ────────────────────────────────────────────────────────────
-function isBinaryDollarValues() {
-    const v = params.possible_values;
-    return v.length === 2 && v.includes(0) && v.includes(1);
-}
-
-function formatValue(value) {
-    if (value === 1 || value === 1.0) return "$1";
-    if (value === 0 && isBinaryDollarValues()) return "$0";
-    return `${Math.round(value * 100)}¢`;
-}
-
-function formatCurrency(value) {
-    return `$${Number(value).toFixed(2)}`;
-}
-
-function getFeedbackImagePath(value) {
-    if (isBinaryDollarValues()) {
-        return `${params.feedback_dir}/${value === 0 ? "0d" : "1d"}.jpeg`;
-    }
-    if (value === 1 || value === 1.0) return `${params.feedback_dir}/1d.jpeg`;
-    return `${params.feedback_dir}/${Math.round(value * 100)}c.jpeg`;
-}
-
-function formatPossibleValues() {
-    return params.possible_values.map(v => formatValue(v)).join(", ");
-}
 
 // ─── Card drawing ─────────────────────────────────────────────────────────────
 function getCardLayout(canvas) {
@@ -76,6 +46,7 @@ function drawObjectCard(ctx, x, y, size, objImage) {
         ctx.fillStyle = "#d0d3d7";
         ctx.fillRect(x, y, size, size);
     }
+
     if (objImage && objImage.complete) {
         const pad = size * 0.14;
         const maxW = size - pad * 2;
@@ -84,12 +55,6 @@ function drawObjectCard(ctx, x, y, size, objImage) {
         const dw = objImage.naturalWidth * scale;
         const dh = objImage.naturalHeight * scale;
         ctx.drawImage(objImage, x + (size - dw) / 2, y + (size - dh) / 2, dw, dh);
-    }
-}
-
-function drawFeedbackCard(ctx, x, y, size, feedbackImage) {
-    if (feedbackImage && feedbackImage.complete) {
-        ctx.drawImage(feedbackImage, x, y, size, size);
     }
 }
 
@@ -106,7 +71,6 @@ function drawHighlightBorder(ctx, x, y, size) {
     ctx.restore();
 }
 
-// ─── Scene drawing ────────────────────────────────────────────────────────────
 function drawChoiceDisplay(ctx, trial) {
     const { cardSize, leftX, rightX, cardY } = getCardLayout(ctx.canvas);
     ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
@@ -116,18 +80,10 @@ function drawChoiceDisplay(ctx, trial) {
 
 function drawHighlightDisplay(ctx, trial, chosenSide) {
     const { cardSize, leftX, rightX, cardY } = getCardLayout(ctx.canvas);
-    ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
     const chosenX = chosenSide === "left" ? leftX : rightX;
+    ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
     drawObjectCard(ctx, chosenX, cardY, cardSize, IMAGE_CACHE[trial[chosenSide].image_path]);
     drawHighlightBorder(ctx, chosenX, cardY, cardSize);
-}
-
-function drawFeedbackDisplay(ctx, trial, chosenSide) {
-    const { cardSize, leftX, rightX, cardY } = getCardLayout(ctx.canvas);
-    ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
-    const feedbackPath = getFeedbackImagePath(trial[chosenSide].value);
-    const chosenX = chosenSide === "left" ? leftX : rightX;
-    drawFeedbackCard(ctx, chosenX, cardY, cardSize, IMAGE_CACHE[feedbackPath]);
 }
 
 function drawTooSlowDisplay(ctx, trial) {
@@ -146,16 +102,11 @@ function drawTooSlowDisplay(ctx, trial) {
 
 // ─── Instruction content ──────────────────────────────────────────────────────
 function buildInstructionPages() {
-    const maxVal = formatValue(Math.max(...params.possible_values));
-    const allVals = formatPossibleValues();
     const blank = `${params.feedback_dir}/blank.jpeg`;
     const banana = `${params.instructions_img_dir}/banana_13s.jpg`;
     const car = `${params.instructions_img_dir}/car_01b.jpg`;
-    const maxFeedback = getFeedbackImagePath(Math.max(...params.possible_values));
-
     const nav = `<div class="nav-hint"><span>Press 'j' to go back</span><span>Press 'k' to continue</span></div>`;
 
-    // Car LEFT, banana RIGHT inside a screen rectangle. hlRight = highlight banana.
     const screenPair = (hlRight = false) => `
         <div style="display:flex; justify-content:center; margin:16px 0;">
             <div class="ins-screen">
@@ -170,97 +121,50 @@ function buildInstructionPages() {
             </div>
         </div>`;
 
-    // Before → After used on pages 3 and 4.
-    // Before: car left, banana right (highlighted).
-    // After: same screen size (two slots), left slot invisible, feedback on right.
-    const feedbackDemo = `
-        <div class="ins-feedback-demo">
-            <div class="ins-screen">
-                <div class="ins-card ins-card-sm">
-                    <img class="ins-card-bg" src="${blank}">
-                    <img class="ins-card-obj" src="${car}">
-                </div>
-                <div class="ins-card ins-card-sm ins-card-highlighted">
-                    <img class="ins-card-bg" src="${blank}">
-                    <img class="ins-card-obj" src="${banana}">
-                </div>
-            </div>
-            <div class="ins-arrow">→</div>
-            <div class="ins-screen">
-                <div class="ins-card ins-card-sm" style="visibility:hidden;"></div>
-                <div class="ins-card ins-card-sm">
-                    <img class="ins-card-bg" src="${maxFeedback}">
-                </div>
-            </div>
-        </div>`;
-
-    // Row of feedback card images for all possible values.
-    const feedbackImgList = `
-        <div class="ins-feedback-list">
-            ${params.possible_values.map(v => `
-                <div class="ins-feedback-item">
-                    <img src="${getFeedbackImagePath(v)}" class="ins-feedback-img" alt="${formatValue(v)}">
-                </div>`).join("")}
-        </div>`;
-
     return [
-        // Page 1
         `<div class="instruction-container">
             <p>In this experiment, you will play a <strong>memory card game</strong>.</p>
-            <p>Your goal is to <strong>win as much money as possible</strong>.</p>
+            <p>Your goal is to remember which images you have seen before.</p>
+            <p>Your bonus will be higher if you make more correct responses.</p>
             ${nav}
         </div>`,
 
-        // Page 2
         `<div class="instruction-container">
             <p>On each trial, you will see a pair of cards like the ones below.</p>
+            <p>Your job is to select which (if any) of the two images you have seen before.</p>
+            <p>You have <strong>${params.max_stimulus_duration / 1000} seconds</strong> to respond.</p>
             ${screenPair()}
-            <p>You have <strong>${params.max_stimulus_duration / 1000} seconds</strong> to pick a card.</p>
             <div class="ins-key-row">
-                <span><strong>'j' key = left card</strong></span>
-                <span><strong>'k' key = right card</strong></span>
+                <span><strong>'j' key = left image was shown before</strong></span>
+                <span><strong>'k' key = right image was shown before</strong></span>
             </div>
+            <p style="text-align:center;"><strong>Space bar = neither image was shown before</strong></p>
             ${nav}
         </div>`,
 
-        // Page 3
         `<div class="instruction-container">
-            <p>Your chosen card will then flip over and you will see how much it was worth.</p>
-            <p>In this example, you chose the card on the right and it was worth <strong>${maxVal}</strong>.</p>
-            ${feedbackDemo}
+            <p>Sometimes one of the two images will be old, and sometimes neither will be old.</p>
+            ${screenPair(true)}
+            <div class="ins-key-row">
+                <span><strong>'j' key = left image was shown before</strong></span>
+                <span><strong>'k' key = right image was shown before</strong></span>
+            </div>
+            <p style="text-align:center;"><strong>Space bar = neither image was shown before</strong></p>
             ${nav}
         </div>`,
 
-        // Page 4 — same demo as page 3
-        `<div class="instruction-container">
-            <p>There is a trick that you can use to earn more money: <strong>each card is always worth the same amount of money</strong>.</p>
-            <p>For example, <strong>the banana card is always worth ${maxVal}</strong>, if it reappears again.</p>
-            <p><strong>So, you can use your memory to pick more valuable cards, and avoid less valuable ones!</strong></p>
-            ${feedbackDemo}
-            ${nav}
-        </div>`,
-
-        // Page 5
-        `<div class="instruction-container">
-            <p>The possible card values are: <strong>${allVals}</strong></p>
-            ${feedbackImgList}
-            <p><strong>To get more bonus money, try your best to select the good cards and avoid the bad ones!</strong></p>
-            ${nav}
-        </div>`,
-
-        // Page 6
         `<div class="instruction-container">
             <h2>Summary</h2>
             <ul>
-                <li>Use the <strong>'j'</strong> and <strong>'k'</strong> keys to choose the left or right cards.</li>
-                <li>Each card will always be worth the same amount of money if you see it again.</li>
-                <li>Use your memory to select good cards and avoid bad ones.</li>
+                <li>Use <strong>'j'</strong> when the left image was shown before.</li>
+                <li>Use <strong>'k'</strong> when the right image was shown before.</li>
+                <li>Use the <strong>space bar</strong> when neither image was shown before.</li>
+                <li>Your bonus depends on your accuracy across the experiment.</li>
                 <li>The experiment will last roughly <strong>${params.completion_time} minutes</strong>, with 3 short breaks.</li>
             </ul>
             ${nav}
         </div>`,
 
-        // Page 7
         `<div class="instruction-container">
             <p>You will now take a short quiz to verify that you have read and understood the instructions.</p>
             <p>You must get all answers correct before proceeding.</p>
@@ -271,97 +175,69 @@ function buildInstructionPages() {
 }
 
 function buildQuizTrials() {
-    const minVal = formatValue(Math.min(...params.possible_values));
-    const maxVal = formatValue(Math.max(...params.possible_values));
-    const blank = `${params.feedback_dir}/blank.jpeg`;
-    const banana = `${params.instructions_img_dir}/banana_13s.jpg`;
-    const car = `${params.instructions_img_dir}/car_01b.jpg`;
-
-    function quizTrial(questionHtml, correctKey) {
+    function quizTrial(questionHtml, choices, correctKey) {
         return {
             type: jsPsychHtmlKeyboardResponse,
             stimulus: questionHtml,
-            choices: ["j", "k"],
+            choices,
             data: { is_quiz_trial: true, correct_key: correctKey },
             on_finish(data) { data.correct = data.response === correctKey; }
         };
     }
-
-    const cardPair = `
-        <div class="ins-trial-demo" style="margin: 10px 0;">
-            <div class="ins-card-col">
-                <div class="ins-card ins-card-sm">
-                    <img class="ins-card-bg" src="${blank}">
-                    <img class="ins-card-obj" src="${banana}">
-                </div>
-            </div>
-            <div class="ins-card-col">
-                <div class="ins-card ins-card-sm">
-                    <img class="ins-card-bg" src="${blank}">
-                    <img class="ins-card-obj" src="${car}">
-                </div>
-            </div>
-        </div>`;
 
     const opts = (left, right) => `
         <div class="quiz-options">
             <div class="quiz-option"><strong>${left}</strong><br>(j)</div>
             <div class="quiz-option"><strong>${right}</strong><br>(k)</div>
         </div>`;
-
-    const wrap = (n, body) => `<div class="instruction-container"><p class="quiz-num">Quiz Question ${n}/7</p>${body}</div>`;
+    const optsWithSpace = (left, right, neither) => `
+        <div class="quiz-options">
+            <div class="quiz-option"><strong>${left}</strong><br>(j)</div>
+            <div class="quiz-option"><strong>${right}</strong><br>(k)</div>
+            <div class="quiz-option"><strong>${neither}</strong><br>(space)</div>
+        </div>`;
+    const wrap = (n, body) => `<div class="instruction-container"><p class="quiz-num">Quiz Question ${n}/5</p>${body}</div>`;
 
     return [
         quizTrial(wrap(1, `
-            <p>True or false? After choosing a card, you will receive feedback about your chosen card's value.</p>
-            ${opts("True", "False")}`),
-            "j"),
+            <p>What should you do if the left image was shown before?</p>
+            ${opts("Press 'j'", "Press 'k'")}`),
+            ["j", "k"], "j"),
 
         quizTrial(wrap(2, `
-            <p>Each card is worth a random amount of money between…</p>
-            ${opts("$0 – $5", `${minVal} – ${maxVal}`)}`),
-            "k"),
+            <p>What should you do if the right image was shown before?</p>
+            ${opts("Press 'j'", "Press 'k'")}`),
+            ["j", "k"], "k"),
 
         quizTrial(wrap(3, `
-            <p>True or false? If you see the same card again, it will be worth the same amount as the last time you saw it.</p>
-            ${opts("True", "False")}`),
-            "j"),
+            <p>What should you do if neither image was shown before?</p>
+            ${optsWithSpace("Press 'j'", "Press 'k'", "Press space")}`),
+            ["j", "k", " "], " "),
 
         quizTrial(wrap(4, `
-            <p>If you previously learned the banana card is worth $0, which card should you pick to earn more money?</p>
-            ${cardPair}
-            ${opts("The left card (banana)", "The right card (car)")}`),
-            "k"),
+            <p>True or false? You will receive feedback after each response.</p>
+            ${opts("True", "False")}`),
+            ["j", "k"], "k"),
 
         quizTrial(wrap(5, `
-            <p>Cards with similar objects on them are worth similar amounts of money.</p>
-            ${opts("True", "False")}`),
-            "k"),
-
-        quizTrial(wrap(6, `
-            <p>Which key should you use to choose an image on the right side?</p>
-            ${opts("'j'", "'k'")}`),
-            "k"),
-
-        quizTrial(wrap(7, `
             <p>Your bonus payment will be higher if you perform better in this game.</p>
             ${opts("True", "False")}`),
-            "j"),
+            ["j", "k"], "j"),
     ];
 }
 
 // ─── Trial builders ───────────────────────────────────────────────────────────
-function buildChoiceTrial(jsPsych, trialSpec) {
+function buildRecognitionTrial(trialSpec) {
     return {
         type: jsPsychCanvasKeyboardResponse,
         canvas_size: [620, 1060],
-        choices: ["j", "k"],
+        choices: ["j", "k", " "],
         trial_duration: params.max_stimulus_duration,
-        data: { phase: "choice", is_choice_trial: true },
+        data: { phase: "recognition", is_recognition_trial: true, is_choice_trial: true },
         on_start() {
             TASK_STATE.currentTrial = materializeRuntimeTrial(trialSpec);
             TASK_STATE.lastChosenSide = null;
-            TASK_STATE.autoSide = null;
+            TASK_STATE.responseMade = false;
         },
         stimulus(canvas) {
             drawChoiceDisplay(canvas.getContext("2d"), TASK_STATE.currentTrial);
@@ -369,8 +245,16 @@ function buildChoiceTrial(jsPsych, trialSpec) {
         on_finish(data) {
             const trial = TASK_STATE.currentTrial;
             const responseKey = (data.response || "").toLowerCase();
+            const chosenSide = responseKey === "j" ? "left" : responseKey === "k" ? "right" : null;
+            const choseNeither = responseKey === " ";
+            const correctKey = trial.trial_type === "old"
+                ? (trial.old_side === "left" ? "j" : "k")
+                : " ";
+            const chosenCard = chosenSide ? trial[chosenSide] : null;
 
-            // Shared trial metadata
+            TASK_STATE.lastChosenSide = chosenSide;
+            TASK_STATE.responseMade = Boolean(responseKey);
+
             Object.assign(data, {
                 trial_number: trial.trial_number,
                 block_index: trial.block_index,
@@ -381,87 +265,32 @@ function buildChoiceTrial(jsPsych, trialSpec) {
                 encoding_trial: trial.source_trial_number,
                 delay: trial.delay,
                 old_side: trial.old_side,
-                old_value: trial.trial_type === "old"
-                    ? (trial.old_side === "left" ? trial.left.value : trial.right.value)
-                    : null,
-                repeat_source_was_chosen: trial.repeat_source_was_chosen,
-                repeat_source_fallback_side: trial.repeat_source_fallback_side,
+                correct_key: correctKey,
                 left_image_name: trial.left.image_name,
                 left_image_path: trial.left.image_path,
                 left_memorability: trial.left.things_memorability,
-                left_value: trial.left.value,
                 left_is_old: trial.left.is_old,
                 right_image_name: trial.right.image_name,
                 right_image_path: trial.right.image_path,
                 right_memorability: trial.right.things_memorability,
-                right_value: trial.right.value,
                 right_is_old: trial.right.is_old,
-                timestamp: new Date().toISOString(),
-            });
-
-            if (!responseKey) {
-                // No response — pick a random side for feedback display and sequence bookkeeping
-                const autoSide = Math.random() < 0.5 ? "left" : "right";
-                const autoCard = trial[autoSide];
-                TASK_STATE.autoSide = autoSide;
-                TASK_STATE.lastChosenSide = null;
-
-                if (trial.trial_type === "new") {
-                    TASK_STATE.sourceChoiceByTrial.set(trial.trial_number, {
-                        chosen_side: autoSide,
-                        card: autoCard,
-                    });
-                }
-
-                Object.assign(data, {
-                    chosen_side: null,
-                    auto_side: autoSide,
-                    chosen_image_name: null,
-                    chosen_image_path: null,
-                    chosen_value: null,
-                    reward: autoCard.value,
-                    response_key: null,
-                    choice_missed: true,
-                    auto_chosen: true,
-                    old_chosen: null,
-                    did_choose_old: null,
-                    outcome: autoCard.value,
-                    optimal_choice: null,
-                });
-                return;
-            }
-
-            const chosenSide = responseKey === "j" ? "left" : "right";
-            const chosenCard = trial[chosenSide];
-            TASK_STATE.lastChosenSide = chosenSide;
-
-            if (trial.trial_type === "new") {
-                TASK_STATE.sourceChoiceByTrial.set(trial.trial_number, {
-                    chosen_side: chosenSide,
-                    card: chosenCard,
-                });
-            }
-
-            Object.assign(data, {
                 chosen_side: chosenSide,
-                auto_side: null,
-                chosen_image_name: chosenCard.image_name,
-                chosen_image_path: chosenCard.image_path,
-                chosen_value: chosenCard.value,
-                reward: chosenCard.value,
-                response_key: responseKey,
-                choice_missed: false,
-                auto_chosen: false,
-                old_chosen: trial.trial_type === "old" ? Number(chosenCard.is_old) : null,
-                did_choose_old: trial.trial_type === "old" ? Number(chosenCard.is_old) : null,
-                outcome: chosenCard.value,
-                optimal_choice: computeOptimalChoice(trial, chosenSide),
+                chose_neither: choseNeither,
+                chosen_image_name: chosenCard ? chosenCard.image_name : null,
+                chosen_image_path: chosenCard ? chosenCard.image_path : null,
+                response_key: responseKey || null,
+                response_category: chosenSide ? "image" : choseNeither ? "neither" : "missed",
+                choice_missed: !responseKey,
+                old_chosen: chosenCard ? Number(chosenCard.is_old) : choseNeither ? 0 : null,
+                did_choose_old: chosenCard ? Number(chosenCard.is_old) : choseNeither ? 0 : null,
+                correct: responseKey === correctKey,
+                timestamp: new Date().toISOString(),
             });
         }
     };
 }
 
-function buildHighlightTrial(jsPsych) {
+function buildHighlightTrial() {
     return {
         timeline: [{
             type: jsPsychCanvasKeyboardResponse,
@@ -490,20 +319,7 @@ function buildTooSlowTrial() {
             }
         }],
         conditional_function() {
-            return TASK_STATE.lastChosenSide === null;
-        }
-    };
-}
-
-function buildFeedbackTrial() {
-    return {
-        type: jsPsychCanvasKeyboardResponse,
-        canvas_size: [620, 1060],
-        choices: "NO_KEYS",
-        trial_duration: params.feedback_duration,
-        stimulus(canvas) {
-            const side = TASK_STATE.lastChosenSide || TASK_STATE.autoSide;
-            drawFeedbackDisplay(canvas.getContext("2d"), TASK_STATE.currentTrial, side);
+            return TASK_STATE.currentTrial && !TASK_STATE.responseMade;
         }
     };
 }
@@ -565,7 +381,6 @@ function initTask(jsPsych, subject_id) {
         experiment_id: params.experiment_id,
         subject_id,
         participant_id: subject_id,
-        possible_values: JSON.stringify(params.possible_values),
         old_trial_pct: params.old_trial_pct,
         min_delay: params.min_delay,
         max_delay: params.max_delay,
@@ -578,15 +393,12 @@ function initTask(jsPsych, subject_id) {
         task_params: JSON.stringify(params),
     });
 
-    // Preload all images
-    const feedbackPaths = params.possible_values.map(v => getFeedbackImagePath(v));
     const blankPath = `${params.feedback_dir}/blank.jpeg`;
     const instructionPaths = [
         `${params.instructions_img_dir}/banana_13s.jpg`,
         `${params.instructions_img_dir}/car_01b.jpg`,
-        getFeedbackImagePath(Math.max(...params.possible_values)),
     ];
-    const allImages = [...new Set([...plan.preload_images, ...feedbackPaths, blankPath, ...instructionPaths])];
+    const allImages = [...new Set([...plan.preload_images, blankPath, ...instructionPaths])];
 
     timeline.push({
         type: jsPsychPreload,
@@ -601,7 +413,6 @@ function initTask(jsPsych, subject_id) {
         }
     });
 
-    // Consent form + fullscreen entry
     timeline.push({
         type: jsPsychFullscreen,
         fullscreen_mode: true,
@@ -616,7 +427,6 @@ function initTask(jsPsych, subject_id) {
         button_label: "Enter fullscreen & begin"
     });
 
-    // Instructions + quiz (loops until all correct)
     timeline.push({
         timeline: [
             {
@@ -630,11 +440,10 @@ function initTask(jsPsych, subject_id) {
         ],
         loop_function(data) {
             const quizResults = data.filter({ is_quiz_trial: true }).values();
-            return quizResults.length < 7 || !quizResults.every(d => d.correct);
+            return quizResults.length < 5 || !quizResults.every(d => d.correct);
         }
     });
 
-    // All-correct confirmation
     timeline.push({
         type: jsPsychHtmlKeyboardResponse,
         stimulus: `<div class="instruction-container" style="text-align:center;">
@@ -645,15 +454,12 @@ function initTask(jsPsych, subject_id) {
         choices: "ALL_KEYS"
     });
 
-    // Initial ITI
     timeline.push(buildBlankCanvasTrial(params.iti));
 
-    // Trials
     plan.trials.forEach(trialSpec => {
-        timeline.push(buildChoiceTrial(jsPsych, trialSpec));
-        timeline.push(buildHighlightTrial(jsPsych));
+        timeline.push(buildRecognitionTrial(trialSpec));
+        timeline.push(buildHighlightTrial());
         timeline.push(buildTooSlowTrial());
-        timeline.push(buildFeedbackTrial());
         timeline.push(buildBlankCanvasTrial(params.iti));
 
         const check = plan.attention_checks.find(c => c.after_trial_number === trialSpec.trial_number);
@@ -667,15 +473,14 @@ function initTask(jsPsych, subject_id) {
         }
     });
 
-    // End screen
     timeline.push({
         type: jsPsychHtmlButtonResponse,
         stimulus() {
             const b = getBonusSummary(jsPsych);
             return `<div class="instruction-container">
                 <h2>Finished!</h2>
-                <p>We sampled <strong>${b.sampledTrials.length}</strong> old-card trials for your bonus.</p>
-                <p>Your sampled total was <strong>${formatCurrency(b.sampledReward)}</strong>.</p>
+                <p>You completed <strong>${b.nTrials}</strong> trials.</p>
+                <p>You got <strong>${b.nCorrect}</strong> correct.</p>
                 <p>Your bonus will be <strong>$${b.bonus.toFixed(2)}</strong>.</p>
                 <p>Your final pay will be <strong>$${(params.base_pay + b.bonus).toFixed(2)}</strong>.</p>
                 <p>Thank you for your participation!</p>
@@ -685,14 +490,15 @@ function initTask(jsPsych, subject_id) {
         on_finish(data) {
             const b = getBonusSummary(jsPsych);
             data.is_summary = true;
-            data.sampled_old_trial_numbers = JSON.stringify(b.sampledTrialNumbers);
-            data.sampled_old_rewards = JSON.stringify(b.sampledRewards);
-            data.sampled_old_total = b.sampledReward.toFixed(2);
+            data.n_recognition_trials = b.nTrials;
+            data.n_correct = b.nCorrect;
+            data.accuracy = b.accuracy;
+            data.bonus_chance_accuracy = b.chanceAccuracy;
+            data.chance_adjusted_accuracy = b.chanceAdjustedAccuracy;
             data.final_bonus = b.bonus.toFixed(2);
         }
     });
 
-    // Data save + redirect
     timeline.push({
         type: jsPsychPipe,
         action: "save",
@@ -719,26 +525,18 @@ function materializeRuntimeTrial(trialSpec) {
             source_trial_number: null,
             delay: null,
             old_side: null,
-            repeat_source_was_chosen: null,
-            repeat_source_fallback_side: null,
-            left: buildCardFromStimulus(trialSpec.left_stimulus, trialSpec.shared_value, false),
-            right: buildCardFromStimulus(trialSpec.right_stimulus, trialSpec.shared_value, false),
+            left: buildCardFromStimulus(trialSpec.left_stimulus, false),
+            right: buildCardFromStimulus(trialSpec.right_stimulus, false),
         };
     }
 
     const sourceTrialSpec = TASK_STATE.plan.trials.find(t => t.trial_number === trialSpec.source_trial_number);
-    const recordedChoice = TASK_STATE.sourceChoiceByTrial.get(trialSpec.source_trial_number);
-    const fallbackSide = trialSpec.repeat_source_fallback_side || trialSpec.fallback_side;
-    const repeatedCard = recordedChoice
-        ? recordedChoice.card
-        : buildCardFromStimulus(
-            fallbackSide === "left" ? sourceTrialSpec.left_stimulus : sourceTrialSpec.right_stimulus,
-            sourceTrialSpec.shared_value,
-            true
-        );
-
-    const repeatedCardCopy = Object.assign({}, repeatedCard, { is_old: true });
-    const lureCard = buildCardFromStimulus(trialSpec.lure_stimulus, trialSpec.lure_value, false);
+    const repeatedSourceSide = trialSpec.fallback_side;
+    const repeatedStimulus = repeatedSourceSide === "left"
+        ? sourceTrialSpec.left_stimulus
+        : sourceTrialSpec.right_stimulus;
+    const repeatedCard = buildCardFromStimulus(repeatedStimulus, true);
+    const lureCard = buildCardFromStimulus(trialSpec.lure_stimulus, false);
 
     return {
         trial_number: trialSpec.trial_number,
@@ -749,14 +547,13 @@ function materializeRuntimeTrial(trialSpec) {
         source_trial_number: trialSpec.source_trial_number,
         delay: trialSpec.delay,
         old_side: trialSpec.old_side,
-        repeat_source_was_chosen: Boolean(recordedChoice),
-        repeat_source_fallback_side: recordedChoice ? null : fallbackSide,
-        left: trialSpec.old_side === "left" ? repeatedCardCopy : lureCard,
-        right: trialSpec.old_side === "right" ? repeatedCardCopy : lureCard,
+        repeated_source_side: repeatedSourceSide,
+        left: trialSpec.old_side === "left" ? repeatedCard : lureCard,
+        right: trialSpec.old_side === "right" ? repeatedCard : lureCard,
     };
 }
 
-function buildCardFromStimulus(stimulus, value, isOld) {
+function buildCardFromStimulus(stimulus, isOld) {
     return {
         image_name: stimulus.image_name,
         image_path: stimulus.image_path,
@@ -764,48 +561,22 @@ function buildCardFromStimulus(stimulus, value, isOld) {
         things_memorability: Number(stimulus.things_memorability),
         things_category: stimulus.things_category,
         memorability_percentile: Number(stimulus.memorability_percentile),
-        value,
-        value_label: formatValue(value),
         is_old: isOld,
     };
 }
 
-// ─── Bonus calculation ────────────────────────────────────────────────────────
 function getBonusSummary(jsPsych) {
-    if (TASK_STATE.bonusSummary) return TASK_STATE.bonusSummary;
-
-    const oldTrials = jsPsych.data.get()
-        .filterCustom(t => t.is_choice_trial && t.trial_type === "old")
+    const trials = jsPsych.data.get()
+        .filterCustom(t => t.is_recognition_trial)
         .values();
-    const sampleN = Math.min(params.bonus_sample_n, oldTrials.length);
-    const rng = EpisodicChoiceSequence.makeRandomHelpers();
-    const sampledTrials = sampleN > 0 ? rng.sample(oldTrials, sampleN) : [];
-    sampledTrials.forEach(t => { t.bonus_sampled = true; });
-
-    const sampledRewards = sampledTrials.map(t => Number(t.reward) || 0);
-    const sampledReward = sampledRewards.reduce((s, v) => s + v, 0);
-    const maxPossible = Math.max(...params.possible_values);
-    const normalized = sampleN > 0 ? sampledReward / (sampleN * maxPossible) : 0;
-    const bonus = EpisodicChoiceSequence.clamp(normalized * params.max_bonus, 0, params.max_bonus);
-
-    TASK_STATE.bonusSummary = { sampledTrials, sampledTrialNumbers: sampledTrials.map(t => t.trial_number), sampledRewards, sampledReward, bonus };
-    return TASK_STATE.bonusSummary;
-}
-
-// ─── Analysis helpers ─────────────────────────────────────────────────────────
-function computeOptimalChoice(trial, chosenSide) {
-    if (trial.trial_type !== "old") return null;
-    const oldCard = trial.old_side === "left" ? trial.left : trial.right;
-    const threshold = getOldValueThreshold(params.possible_values);
-    if (oldCard.value === threshold) return null;
-    const shouldChooseOld = oldCard.value > threshold;
-    const didChooseOld = chosenSide === trial.old_side;
-    return Number((shouldChooseOld && didChooseOld) || (!shouldChooseOld && !didChooseOld));
-}
-
-function getOldValueThreshold(values) {
-    const sorted = values.slice().sort((a, b) => a - b);
-    return (sorted[sorted.length / 2 - 1] + sorted[sorted.length / 2]) / 2;
+    const nCorrect = trials.filter(t => t.correct).length;
+    const accuracy = trials.length > 0 ? nCorrect / trials.length : 0;
+    const chanceAccuracy = params.bonus_chance_accuracy;
+    const chanceAdjustedAccuracy = chanceAccuracy < 1
+        ? EpisodicChoiceSequence.clamp((accuracy - chanceAccuracy) / (1 - chanceAccuracy), 0, 1)
+        : 0;
+    const bonus = chanceAdjustedAccuracy * params.max_bonus;
+    return { nTrials: trials.length, nCorrect, accuracy, chanceAccuracy, chanceAdjustedAccuracy, bonus };
 }
 
 function loadStimulusMetadata() {
