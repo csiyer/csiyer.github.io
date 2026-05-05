@@ -30,7 +30,7 @@ const params = {
     data_pipe_id: "0eMBjYEVa3qX",
     osf_project_id: "2cm34",
     osf_component_id: "8d2cb",
-    prolific_completion_code: "PLACEHOLDER",
+    prolific_completion_code: "C10TSSI1",
 
     consent_pdf: "https://csiyer.github.io/files/online_consent_form.pdf",
     stimuli_dir: "../../stimuli",
