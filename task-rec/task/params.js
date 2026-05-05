@@ -24,7 +24,7 @@ const params = {
 
     completion_time: 20,
     base_pay: 4,
-    max_bonus: 1,
+    max_bonus: 2,
     bonus_chance_accuracy: 0.5,
     data_pipe_id: "0eMBjYEVa3qX",
     osf_project_id: "2cm34",

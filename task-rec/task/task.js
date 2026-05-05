@@ -265,6 +265,7 @@ function buildRecognitionTrial(trialSpec) {
                 encoding_trial: trial.source_trial_number,
                 delay: trial.delay,
                 old_side: trial.old_side,
+                repeated_source_side: trial.repeated_source_side,
                 correct_key: correctKey,
                 left_image_name: trial.left.image_name,
                 left_image_path: trial.left.image_path,
@@ -337,14 +338,15 @@ function buildBlankCanvasTrial(duration) {
 }
 
 function buildAttentionCheckTrial(attentionCheck) {
-    const label = attentionCheck.correct_key === "arrowup" ? "UP" : "DOWN";
+    const label = attentionCheck.correct_key.toUpperCase();
     return {
         type: jsPsychHtmlKeyboardResponse,
         stimulus: `<div class="instruction-container" style="text-align:center;">
             <h2>Attention Check</h2>
-            <p>Press the <strong>${label}</strong> arrow key.</p>
+            <p>Press the <strong>${label}</strong> key.</p>
+            <p style="color:#ffffff;">IMPORTANT: actually, click the SPACE bar.</p>
         </div>`,
-        choices: ["arrowup", "arrowdown"],
+        choices: "ALL_KEYS",
         data: {
             is_attention_check: true,
             correct_key: attentionCheck.correct_key,
@@ -375,6 +377,8 @@ function initTask(jsPsych, subject_id) {
     const stimulusRows = loadStimulusMetadata();
     const plan = EpisodicChoiceSequence.buildSequencePlan(params, stimulusRows);
     const summary = EpisodicChoiceSequence.summarizePlan(plan);
+    // console.log(plan)
+    // console.log(summary)
     TASK_STATE.plan = plan;
 
     jsPsych.data.addProperties({
@@ -525,6 +529,7 @@ function materializeRuntimeTrial(trialSpec) {
             source_trial_number: null,
             delay: null,
             old_side: null,
+            repeated_source_side: null,
             left: buildCardFromStimulus(trialSpec.left_stimulus, false),
             right: buildCardFromStimulus(trialSpec.right_stimulus, false),
         };

@@ -163,6 +163,9 @@
 
     function buildAttentionChecks(params, rng) {
         const checks = [];
+        const attentionKeys = "abcdefghijklmnopqrstuvwxyz"
+            .split("")
+            .filter((key) => key !== "j" && key !== "k");
         let blockStart = 1;
 
         for (let blockIndex = 0; blockIndex < params.block_sizes.length && checks.length < params.n_attention_checks; blockIndex++) {
@@ -177,7 +180,7 @@
             if (eligible.length > 0) {
                 checks.push({
                     after_trial_number: rng.sample(eligible, 1)[0],
-                    correct_key: rng.sample(["arrowup", "arrowdown"], 1)[0],
+                    correct_key: rng.sample(attentionKeys, 1)[0],
                 });
             }
 
