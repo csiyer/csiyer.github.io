@@ -26,9 +26,9 @@ const params = {
     base_pay: 4,
     max_bonus: 2,
     bonus_chance_accuracy: 0.5,
-    data_pipe_id: "0eMBjYEVa3qX",
+    data_pipe_id: "5DcSyF1yOSY1",
     osf_project_id: "2cm34",
-    osf_component_id: "8d2cb",
+    osf_component_id: "ambkw",
     prolific_completion_code: "PLACEHOLDER",
 
     consent_pdf: "https://csiyer.github.io/files/online_consent_form.pdf",
