@@ -23,7 +23,7 @@ const params = {
     highlight_color: "#22c55e",
 
     completion_time: 20,
-    base_pay: 4,
+    base_pay: 5,
     max_bonus: 2,
     bonus_chance_accuracy: 0.5,
     data_pipe_id: "5DcSyF1yOSY1",

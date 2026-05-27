@@ -24,13 +24,13 @@ const params = {
     highlight_color: "#22c55e",
 
     completion_time: 20,
-    base_pay: 4,
+    base_pay: 5,
     max_bonus: 2,
     bonus_sample_n: 10,
     data_pipe_id: "0eMBjYEVa3qX",
     osf_project_id: "2cm34",
     osf_component_id: "8d2cb",
-    prolific_completion_code: "C10TSSI1",
+    prolific_completion_code: "CBOBLRMG",
 
     consent_pdf: "https://csiyer.github.io/files/online_consent_form.pdf",
     stimuli_dir: "../../stimuli",
