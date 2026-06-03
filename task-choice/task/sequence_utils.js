@@ -38,14 +38,30 @@
     }
 
     function findClosestRemainderCombo(valuesInt, remainder, targetSum) {
+        // Tiebreakers (after minimising |distance|):
+        //   1. maximise unique indices used  (most spread across values)
+        //   2. minimise sum of |index - centre|  (prefer middle values over extremes)
+        const centerIdx = (valuesInt.length - 1) / 2;
         let bestCombo = null;
         let bestDistance = Infinity;
+        let bestUniqueCount = -1;
+        let bestCenterDist = Infinity;
 
         function recurse(startIndex, remainingCount, remainingTarget, current) {
             if (remainingCount === 0) {
                 const distance = Math.abs(remainingTarget);
-                if (distance < bestDistance) {
+                const uniqueCount = new Set(current).size;
+                const centerDist = current.reduce((sum, idx) => sum + Math.abs(idx - centerIdx), 0);
+
+                const isBetter =
+                    distance < bestDistance ||
+                    (distance === bestDistance && uniqueCount > bestUniqueCount) ||
+                    (distance === bestDistance && uniqueCount === bestUniqueCount && centerDist < bestCenterDist);
+
+                if (isBetter) {
                     bestDistance = distance;
+                    bestUniqueCount = uniqueCount;
+                    bestCenterDist = centerDist;
                     bestCombo = current.slice();
                 }
                 return;
