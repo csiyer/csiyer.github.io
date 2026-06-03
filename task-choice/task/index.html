@@ -219,23 +219,48 @@
     <script src="sequence_utils.js"></script>
     <script src="task.js"></script>
     <script>
-        const jsPsych = initJsPsych({
-            on_finish: function () {
-                // Final redirect handled in task timeline.
-            }
-        });
+        // ── Automation / bot detection (runs before experiment starts) ──────────
+        const isAutomated = (
+            navigator.webdriver === true ||
+            !!window.__playwright ||
+            !!window.__nightmare ||
+            !!window._selenium ||
+            !!window.__webdriver_script_fn ||
+            !!window.domAutomation ||
+            !!window.domAutomationController ||
+            window.outerWidth === 0
+        );
 
-        document.body.style.backgroundColor = params.background_color;
+        if (isAutomated) {
+            document.body.style.display = 'flex';
+            document.body.style.alignItems = 'center';
+            document.body.style.justifyContent = 'center';
+            document.body.innerHTML = `
+                <div class="instruction-container" style="max-width:640px; text-align:center;">
+                    <h2>Not Eligible</h2>
+                    <p>Sorry! Your computer is not eligible for this study.</p>
+                    <p>Please go back to Prolific and return the study. Thanks!</p>
+                    <p style="margin-top:24px; color:#888; font-size:0.9em;">Code: BROWSERCHECK</p>
+                </div>
+            `;
+        } else {
+            const jsPsych = initJsPsych({
+                on_finish: function () {
+                    // Final redirect handled in task timeline.
+                }
+            });
 
-        const subject_id = jsPsych.randomization.randomID(10);
-        jsPsych.data.addProperties({
-            subject_id: subject_id,
-            prolific_id: jsPsych.data.getURLVariable('PROLIFIC_PID') || 'local',
-            study_id: jsPsych.data.getURLVariable('STUDY_ID') || 'local',
-            session_id: jsPsych.data.getURLVariable('SESSION_ID') || 'local'
-        });
+            document.body.style.backgroundColor = params.background_color;
 
-        initTask(jsPsych, subject_id);
+            const prolific_id = jsPsych.data.getURLVariable('PROLIFIC_PID') || `local_${jsPsych.randomization.randomID(10)}`;
+            jsPsych.data.addProperties({
+                prolific_id: prolific_id,
+                study_id: jsPsych.data.getURLVariable('STUDY_ID') || 'local',
+                session_id: jsPsych.data.getURLVariable('SESSION_ID') || 'local'
+            });
+
+            initTask(jsPsych, prolific_id);
+        }
     </script>
 </body>
 

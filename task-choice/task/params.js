@@ -1,5 +1,5 @@
 const params = {
-    experiment_id: "episodic_choice_v3",
+    experiment_id: "graded_value_6-3-26",
 
     n_trials: 312,
     n_blocks: 3,
@@ -9,7 +9,7 @@ const params = {
     old_trial_pct: 0.5,
     min_delay: 7,
     max_delay: 15,
-    possible_values: [0, 1], //// only $0 or $1 -- binary values
+    possible_values: [0, 0.2, 0.4, 0.6, 0.8, 1], // [0, 1], //// only $0 or $1 -- binary values
 
     // Timing (ms)
     max_stimulus_duration: 2000,
@@ -30,7 +30,7 @@ const params = {
     data_pipe_id: "0eMBjYEVa3qX",
     osf_project_id: "2cm34",
     osf_component_id: "8d2cb",
-    prolific_completion_code: "CBOBLRMG",
+    prolific_completion_code: "CW2WAAZP", // original: CBOBLRMG, graded_value: CW2WAAZP
 
     consent_pdf: "https://csiyer.github.io/files/online_consent_form.pdf",
     stimuli_dir: "../../stimuli",

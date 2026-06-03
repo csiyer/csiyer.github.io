@@ -165,7 +165,7 @@
         const checks = [];
         const attentionKeys = "abcdefghijklmnopqrstuvwxyz"
             .split("")
-            .filter((key) => key !== "j" && key !== "k");
+            .filter((key) => key !== "j" && key !== "k" && key !== "x");
         let blockStart = 1;
 
         for (let blockIndex = 0; blockIndex < params.block_sizes.length && checks.length < params.n_attention_checks; blockIndex++) {
