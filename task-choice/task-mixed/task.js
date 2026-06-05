@@ -639,6 +639,7 @@ function buildInstructionPages() {
         </div>`,
 
         `<div class="instruction-container">
+            <p>Sometimes, you will see two cards reappear than you have seen before.</p>
             <p>There is a trick that you can use to earn more money: <strong>each card is always worth the same amount of money</strong>.</p>
             <p>For example, <strong>the banana card is always worth ${maxVal}</strong>, if it reappears again.</p>
             <p><strong>So, you can use your memory to pick more valuable cards, and avoid less valuable ones!</strong></p>
@@ -731,7 +732,7 @@ function buildQuizTrials() {
             ${opts("True", "False")}`), "j"),
 
         quizTrial(wrap(4, `
-            <p>If you previously learned the banana card is worth $0, which card should you pick to earn more money?</p>
+            <p>If you previously learned the banana card is worth $0, and the car is $1, which card should you pick to earn more money?</p>
             ${cardPair}
             ${opts("The left card (banana)", "The right card (car)")}`), "k"),
 

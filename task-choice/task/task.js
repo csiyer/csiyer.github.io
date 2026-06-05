@@ -233,9 +233,10 @@ function buildInstructionPages() {
 
         // Page 4 — same demo as page 3
         `<div class="instruction-container">
+            <p>Sometimes, you will see a card reappear than you have seen before.</p>
             <p>There is a trick that you can use to earn more money: <strong>each card is always worth the same amount of money</strong>.</p>
             <p>For example, <strong>the banana card is always worth ${maxVal}</strong>, if it reappears again.</p>
-            <p><strong>So, you can use your memory to pick more valuable cards, and avoid less valuable ones!</strong></p>
+            <p><strong>So, you can use your memory to pick valuable cards, and avoid less valuable ones!</strong></p>
             ${feedbackDemo}
             ${nav}
         </div>`,
