@@ -1,12 +1,14 @@
 const params = {
-    experiment_id: "mixed_mem_pilot_6-5-26",
+    experiment_id: "mixed_mem_A_pilot_6-5-26",
 
-    n_enc: 152,                         // fixed encoding (new/new) trials; each pairs 1 high + 1 low item
-    // old/old retrieval trials are inserted dynamically -- see task.js
-    // expected yield ~63 retrieval trials at p_high=0.5, total sequence ~215 trials
-    block_enc_boundaries: [49, 100],    // break inserted after enc trial at these 0-indexed enc_index values (~3 equal blocks)
+    // Trial structure (computed by buildSequencePlan; shown here for reference)
+    //   78 H/H encoding + 78 L/L encoding + 78 old/old = 234 trials total
+    //   old/old = 1/3 of trials; types 1&2 exactly 20 each, types 3&4 exactly 19 each
+    //   delay direction exactly 39/39 H-first vs L-first; delay_H ≈ delay_L (by construction)
+    n_blocks: 3,
+    block_trial_boundaries: [77, 154],  // break inserted after trial at these numbers
     n_attention_checks: 3,
-    attention_check_enc_indices: [20, 70, 130],
+    attention_check_trial_numbers: [25, 103, 180],
 
     min_delay: 7,
     max_delay: 15,

@@ -24,20 +24,13 @@ const IMAGE_CACHE = {};
 
 const TASK_STATE = {
     plan: null,
+    trialSpecByNumber: null,   // Map<trial_number, trialSpec> for O(1) lookup
     currentTrial: null,
     lastChosenSide: null,
     autoSide: null,
     bonusSummary: null,
-
-    // Dynamic sequence tracking
-    seq_number: 1,          // absolute position in the actual sequence (enc + ret trials)
-    enc_trial_count: 0,     // encoding trials completed so far
-    currentBlockIndex: 1,   // block of the current (or most recent) encoding trial
-
-    // Old-item pools: each entry = { seq_num, value, card }
-    pool_H: [],             // items participant chose that were HIGH memorability
-    pool_L: [],             // items participant chose that were LOW memorability
-    ret_type_counts: [0, 0, 0, 0],  // counts of retrieval types 1–4
+    // Maps encoding trial_number → { card, chosen_side, source_was_chosen }
+    chosenByEncTrial: new Map(),
 };
 
 // ─── Value helpers ────────────────────────────────────────────────────────────
@@ -64,71 +57,6 @@ function getFeedbackImagePath(value) {
 
 function formatPossibleValues() {
     return params.possible_values.map(v => formatValue(v)).join(", ");
-}
-
-// ─── Block index helper ───────────────────────────────────────────────────────
-function getBlockIndex(encTrialCount) {
-    // enc_trial_count is the count BEFORE the current trial completes
-    const bounds = params.block_enc_boundaries;
-    if (encTrialCount <= bounds[0]) return 1;
-    if (encTrialCount <= bounds[1]) return 2;
-    return 3;
-}
-
-// ─── Pool helpers ─────────────────────────────────────────────────────────────
-function getRetType(hValue, lValue) {
-    if      (hValue === 0 && lValue === 1) return 1;   // H=$0, L=$1
-    else if (hValue === 1 && lValue === 0) return 2;   // H=$1, L=$0
-    else if (hValue === 0 && lValue === 0) return 3;   // both $0
-    else                                   return 4;   // both $1
-}
-
-function getEligiblePair(seqNum) {
-    const lo = seqNum - params.max_delay;
-    const hi = seqNum - params.min_delay;
-    const availH = TASK_STATE.pool_H.filter(x => lo <= x.seq_num && x.seq_num <= hi);
-    const availL = TASK_STATE.pool_L.filter(x => lo <= x.seq_num && x.seq_num <= hi);
-    return { availH, availL, eligible: availH.length > 0 && availL.length > 0 };
-}
-
-function pickSmartPair(availH, availL) {
-    // Pick the (H, L) combination whose type is currently least frequent.
-    // Ties broken by earliest source trial (to minimise item expiry).
-    let bestH = null, bestL = null, bestCount = Infinity;
-    for (const h of [...availH].sort((a, b) => a.seq_num - b.seq_num)) {
-        for (const l of [...availL].sort((a, b) => a.seq_num - b.seq_num)) {
-            const t = getRetType(h.value, l.value);
-            if (TASK_STATE.ret_type_counts[t - 1] < bestCount) {
-                bestCount = TASK_STATE.ret_type_counts[t - 1];
-                bestH = h; bestL = l;
-            }
-        }
-    }
-    return { hItem: bestH, lItem: bestL };
-}
-
-// ─── Card builders ────────────────────────────────────────────────────────────
-function buildCardFromStimulus(stimulus, value, isOld) {
-    return {
-        image_name:             stimulus.image_name,
-        image_path:             stimulus.image_path,
-        things_file_path:       stimulus.things_file_path,
-        things_memorability:    Number(stimulus.things_memorability),
-        things_category:        stimulus.things_category,
-        memorability_bin:       stimulus.memorability_bin,
-        memorability_percentile: Number(stimulus.memorability_percentile),
-        value,
-        value_label:            formatValue(value),
-        is_old:                 isOld,
-        enc_seq_num:            null,
-    };
-}
-
-function buildCardFromPoolItem(poolItem) {
-    return Object.assign({}, poolItem.card, {
-        is_old:      true,
-        enc_seq_num: poolItem.seq_num,
-    });
 }
 
 // ─── Canvas drawing ───────────────────────────────────────────────────────────
@@ -212,6 +140,63 @@ function drawTooSlowDisplay(ctx, trial) {
     ctx.restore();
 }
 
+// ─── Card builders ────────────────────────────────────────────────────────────
+function buildCardFromStimulus(stimulus, value, isOld) {
+    return {
+        image_name:              stimulus.image_name,
+        image_path:              stimulus.image_path,
+        things_file_path:        stimulus.things_file_path,
+        things_memorability:     Number(stimulus.things_memorability),
+        things_category:         stimulus.things_category,
+        memorability_bin:        stimulus.memorability_bin,
+        memorability_percentile: Number(stimulus.memorability_percentile),
+        value,
+        value_label:             formatValue(value),
+        is_old:                  isOld,
+    };
+}
+
+// ─── Optimal choice ───────────────────────────────────────────────────────────
+function computeOptimalChoice(trial, chosenSide) {
+    if (trial.trial_type !== "old") return null;
+    const lv = trial.left.value, rv = trial.right.value;
+    if (lv === rv) return null;
+    return Number(chosenSide === (lv > rv ? "left" : "right"));
+}
+
+// ─── Shared choice response handler ──────────────────────────────────────────
+function handleChoiceResponse(data, trial, responseKey) {
+    if (!responseKey) {
+        const autoSide = Math.random() < 0.5 ? "left" : "right";
+        TASK_STATE.autoSide = autoSide;
+        TASK_STATE.lastChosenSide = null;
+        Object.assign(data, {
+            chosen_side:       null,
+            auto_side:         autoSide,
+            chosen_image_name: null,
+            chosen_value:      null,
+            reward:            trial[autoSide].value,
+            choice_missed:     true,
+            auto_chosen:       true,
+            optimal_choice:    null,
+        });
+    } else {
+        const chosenSide = responseKey === "j" ? "left" : "right";
+        const chosenCard = trial[chosenSide];
+        TASK_STATE.lastChosenSide = chosenSide;
+        Object.assign(data, {
+            chosen_side:       chosenSide,
+            auto_side:         null,
+            chosen_image_name: chosenCard.image_name,
+            chosen_value:      chosenCard.value,
+            reward:            chosenCard.value,
+            choice_missed:     false,
+            auto_chosen:       false,
+            optimal_choice:    computeOptimalChoice(trial, chosenSide),
+        });
+    }
+}
+
 // ─── Shared sub-trial builders ────────────────────────────────────────────────
 function buildHighlightTrial(jsPsych) {
     return {
@@ -269,50 +254,8 @@ function buildBlankCanvasTrial(duration) {
     };
 }
 
-// ─── Optimal choice ───────────────────────────────────────────────────────────
-function computeOptimalChoice(trial, chosenSide) {
-    if (trial.trial_type !== "old") return null;
-    const lv = trial.left.value, rv = trial.right.value;
-    if (lv === rv) return null;          // both same value → NA
-    const betterSide = lv > rv ? "left" : "right";
-    return Number(chosenSide === betterSide);
-}
-
-// ─── Shared on_finish for choice responses ────────────────────────────────────
-function handleChoiceResponse(data, trial, responseKey) {
-    if (!responseKey) {
-        const autoSide = Math.random() < 0.5 ? "left" : "right";
-        TASK_STATE.autoSide = autoSide;
-        TASK_STATE.lastChosenSide = null;
-        Object.assign(data, {
-            chosen_side:       null,
-            auto_side:         autoSide,
-            chosen_image_name: null,
-            chosen_value:      null,
-            reward:            trial[autoSide].value,
-            choice_missed:     true,
-            auto_chosen:       true,
-            optimal_choice:    null,
-        });
-    } else {
-        const chosenSide = responseKey === "j" ? "left" : "right";
-        const chosenCard = trial[chosenSide];
-        TASK_STATE.lastChosenSide = chosenSide;
-        Object.assign(data, {
-            chosen_side:       chosenSide,
-            auto_side:         null,
-            chosen_image_name: chosenCard.image_name,
-            chosen_value:      chosenCard.value,
-            reward:            chosenCard.value,
-            choice_missed:     false,
-            auto_chosen:       false,
-            optimal_choice:    computeOptimalChoice(trial, chosenSide),
-        });
-    }
-}
-
 // ─── Encoding trial builder ───────────────────────────────────────────────────
-function buildEncodingChoiceTrial(jsPsych, encSpec) {
+function buildEncodingChoiceTrial(jsPsych, trialSpec) {
     return {
         type: jsPsychCanvasKeyboardResponse,
         canvas_size: [620, 1060],
@@ -321,24 +264,14 @@ function buildEncodingChoiceTrial(jsPsych, encSpec) {
         data: { phase: "choice", is_choice_trial: true },
 
         on_start() {
-            // Snap and advance sequence position
-            const seqNum = TASK_STATE.seq_number;
-            TASK_STATE.seq_number++;
-
-            // Block index is based on enc count BEFORE this trial
-            TASK_STATE.currentBlockIndex = getBlockIndex(TASK_STATE.enc_trial_count);
-
             TASK_STATE.currentTrial = {
-                trial_number:  seqNum,
-                block_index:   TASK_STATE.currentBlockIndex,
+                trial_number:  trialSpec.trial_number,
+                block_index:   trialSpec.block_index,
                 trial_type:    "new",
-                enc_index:     encSpec.enc_index,
-                high_stimulus: encSpec.high_stimulus,
-                low_stimulus:  encSpec.low_stimulus,
-                shared_value:  encSpec.shared_value,
-                left_is_high:  encSpec.left_is_high,
-                left:  buildCardFromStimulus(encSpec.left_stimulus,  encSpec.shared_value, false),
-                right: buildCardFromStimulus(encSpec.right_stimulus, encSpec.shared_value, false),
+                enc_type:      trialSpec.enc_type,
+                shared_value:  trialSpec.shared_value,
+                left:  buildCardFromStimulus(trialSpec.left_stimulus,  trialSpec.shared_value, false),
+                right: buildCardFromStimulus(trialSpec.right_stimulus, trialSpec.shared_value, false),
             };
             TASK_STATE.lastChosenSide = null;
             TASK_STATE.autoSide = null;
@@ -353,40 +286,27 @@ function buildEncodingChoiceTrial(jsPsych, encSpec) {
             const responseKey = (data.response || "").toLowerCase();
             handleChoiceResponse(data, trial, responseKey);
 
-            // Determine which card was (effectively) chosen for pool purposes
-            const effectiveSide = responseKey
-                ? (responseKey === "j" ? "left" : "right")
-                : TASK_STATE.autoSide;
+            // Track which card was effectively chosen, for retrieval display later
+            const effectiveSide = TASK_STATE.lastChosenSide || TASK_STATE.autoSide;
             const chosenCard = trial[effectiveSide];
+            TASK_STATE.chosenByEncTrial.set(trial.trial_number, {
+                card:             Object.assign({}, chosenCard),
+                chosen_side:      effectiveSide,
+                source_was_chosen: TASK_STATE.lastChosenSide !== null,
+            });
 
-            // Add to pool
-            const poolItem = {
-                seq_num: trial.trial_number,
-                value:   chosenCard.value,
-                card:    Object.assign({}, chosenCard),
-            };
-            if (chosenCard.memorability_bin === "high") {
-                TASK_STATE.pool_H.push(poolItem);
-            } else {
-                TASK_STATE.pool_L.push(poolItem);
-            }
-
-            TASK_STATE.enc_trial_count++;
-
-            // Common data fields
             Object.assign(data, {
                 trial_number:       trial.trial_number,
                 block_index:        trial.block_index,
                 trial_type:         "new",
                 old_trial:          0,
-                enc_index:          trial.enc_index,
+                enc_type:           trial.enc_type,
                 shared_value:       trial.shared_value,
                 left_image_name:    trial.left.image_name,
                 left_image_path:    trial.left.image_path,
                 left_mem_bin:       trial.left.memorability_bin,
                 left_memorability:  trial.left.things_memorability,
                 left_value:         trial.left.value,
-                left_is_high:       trial.left_is_high,
                 right_image_name:   trial.right.image_name,
                 right_image_path:   trial.right.image_path,
                 right_mem_bin:      trial.right.memorability_bin,
@@ -400,18 +320,8 @@ function buildEncodingChoiceTrial(jsPsych, encSpec) {
 }
 
 // ─── Retrieval trial builder ──────────────────────────────────────────────────
-/**
- * buildConditionalRetrievalBundle
- * --------------------------------
- * Returns a jsPsych conditional node. The conditional_function checks whether
- * the current pool contains ≥1 eligible H item AND ≥1 eligible L item within
- * the delay window relative to the current sequence position.
- *
- * If eligible, the bundle (choice + highlight + too_slow + feedback + ITI)
- * runs; the specific items are chosen in the choice trial's on_start.
- */
-function buildConditionalRetrievalBundle(jsPsych) {
-    const choiceTrial = {
+function buildRetrievalChoiceTrial(jsPsych, trialSpec) {
+    return {
         type: jsPsychCanvasKeyboardResponse,
         canvas_size: [620, 1060],
         choices: ["j", "k"],
@@ -419,38 +329,51 @@ function buildConditionalRetrievalBundle(jsPsych) {
         data: { phase: "choice", is_choice_trial: true },
 
         on_start() {
-            // Snap and advance sequence position
-            const seqNum = TASK_STATE.seq_number;
-            TASK_STATE.seq_number++;
+            // Retrieve H card (from HH encoding trial)
+            const hhChoice  = TASK_STATE.chosenByEncTrial.get(trialSpec.source_hh_trial_number);
+            const hhEncSpec = TASK_STATE.trialSpecByNumber.get(trialSpec.source_hh_trial_number);
+            let hCard;
+            if (hhChoice) {
+                hCard = Object.assign({}, hhChoice.card, { is_old: true });
+            } else {
+                const stim = trialSpec.fallback_hh_side === "left"
+                    ? hhEncSpec.left_stimulus : hhEncSpec.right_stimulus;
+                hCard = buildCardFromStimulus(stim, trialSpec.h_value, true);
+            }
 
-            // Pick best pair from pool
-            const { availH, availL } = getEligiblePair(seqNum);
-            const { hItem, lItem }   = pickSmartPair(availH, availL);
+            // Retrieve L card (from LL encoding trial)
+            const llChoice  = TASK_STATE.chosenByEncTrial.get(trialSpec.source_ll_trial_number);
+            const llEncSpec = TASK_STATE.trialSpecByNumber.get(trialSpec.source_ll_trial_number);
+            let lCard;
+            if (llChoice) {
+                lCard = Object.assign({}, llChoice.card, { is_old: true });
+            } else {
+                const stim = trialSpec.fallback_ll_side === "left"
+                    ? llEncSpec.left_stimulus : llEncSpec.right_stimulus;
+                lCard = buildCardFromStimulus(stim, trialSpec.l_value, true);
+            }
 
-            // Remove from pools
-            TASK_STATE.pool_H = TASK_STATE.pool_H.filter(x => x !== hItem);
-            TASK_STATE.pool_L = TASK_STATE.pool_L.filter(x => x !== lItem);
-
-            const retType = getRetType(hItem.value, lItem.value);
-            TASK_STATE.ret_type_counts[retType - 1]++;
-
-            // Randomise left/right assignment
-            const leftIsH = Math.random() < 0.5;
-            const leftItem  = leftIsH ? hItem : lItem;
-            const rightItem = leftIsH ? lItem : hItem;
+            const leftCard  = trialSpec.left_is_high ? hCard : lCard;
+            const rightCard = trialSpec.left_is_high ? lCard : hCard;
 
             TASK_STATE.currentTrial = {
-                trial_number:   seqNum,
-                block_index:    TASK_STATE.currentBlockIndex,
-                trial_type:     "old",
-                ret_type:       retType,
-                h_item:         hItem,
-                l_item:         lItem,
-                h_enc_seq_num:  hItem.seq_num,
-                l_enc_seq_num:  lItem.seq_num,
-                left_is_high:   leftIsH,
-                left:  buildCardFromPoolItem(leftItem),
-                right: buildCardFromPoolItem(rightItem),
+                trial_number:           trialSpec.trial_number,
+                block_index:            trialSpec.block_index,
+                trial_type:             "old",
+                ret_type:               trialSpec.ret_type,
+                h_card:                 hCard,
+                l_card:                 lCard,
+                left_is_high:           trialSpec.left_is_high,
+                h_value:                trialSpec.h_value,
+                l_value:                trialSpec.l_value,
+                delay_h:                trialSpec.delay_h,
+                delay_l:                trialSpec.delay_l,
+                source_hh_trial_number: trialSpec.source_hh_trial_number,
+                source_ll_trial_number: trialSpec.source_ll_trial_number,
+                hh_source_chosen:       hhChoice ? hhChoice.source_was_chosen : false,
+                ll_source_chosen:       llChoice ? llChoice.source_was_chosen : false,
+                left:                   leftCard,
+                right:                  rightCard,
             };
             TASK_STATE.lastChosenSide = null;
             TASK_STATE.autoSide = null;
@@ -465,65 +388,45 @@ function buildConditionalRetrievalBundle(jsPsych) {
             const responseKey = (data.response || "").toLowerCase();
             handleChoiceResponse(data, trial, responseKey);
 
-            const h = trial.h_item;
-            const l = trial.l_item;
-            const lv = trial.left.value, rv = trial.right.value;
-
-            // optimal_old_choice: name of the bin to pick, or NA
+            // Which bin should be chosen? Defined when H and L have different values.
             let optimalOldChoice = null;
-            if (lv !== rv) {
-                if (trial.left_is_high) {
-                    optimalOldChoice = lv > rv ? "high" : "low";
-                } else {
-                    optimalOldChoice = rv > lv ? "high" : "low";
-                }
+            if (trial.h_value !== trial.l_value) {
+                optimalOldChoice = trial.h_value > trial.l_value ? "high" : "low";
             }
 
             Object.assign(data, {
-                trial_number:       trial.trial_number,
-                block_index:        trial.block_index,
-                trial_type:         "old",
-                old_trial:          1,
-                ret_type:           trial.ret_type,
-                optimal_old_choice: optimalOldChoice,
-                h_enc_seq_num:      trial.h_enc_seq_num,
-                l_enc_seq_num:      trial.l_enc_seq_num,
-                delay_h:            trial.trial_number - trial.h_enc_seq_num,
-                delay_l:            trial.trial_number - trial.l_enc_seq_num,
-                left_image_name:    trial.left.image_name,
-                left_image_path:    trial.left.image_path,
-                left_mem_bin:       trial.left.memorability_bin,
-                left_memorability:  trial.left.things_memorability,
-                left_value:         trial.left.value,
-                left_is_high:       trial.left_is_high,
-                right_image_name:   trial.right.image_name,
-                right_image_path:   trial.right.image_path,
-                right_mem_bin:      trial.right.memorability_bin,
-                right_memorability: trial.right.things_memorability,
-                right_value:        trial.right.value,
-                h_value:            h.value,
-                l_value:            l.value,
-                timestamp:          new Date().toISOString(),
+                trial_number:           trial.trial_number,
+                block_index:            trial.block_index,
+                trial_type:             "old",
+                old_trial:              1,
+                ret_type:               trial.ret_type,
+                optimal_old_choice:     optimalOldChoice,
+                source_hh_trial_number: trial.source_hh_trial_number,
+                source_ll_trial_number: trial.source_ll_trial_number,
+                delay_h:                trial.delay_h,
+                delay_l:                trial.delay_l,
+                left_is_high:           trial.left_is_high,
+                h_value:                trial.h_value,
+                l_value:                trial.l_value,
+                hh_source_chosen:       trial.hh_source_chosen,
+                ll_source_chosen:       trial.ll_source_chosen,
+                left_image_name:        trial.left.image_name,
+                left_image_path:        trial.left.image_path,
+                left_mem_bin:           trial.left.memorability_bin,
+                left_memorability:      trial.left.things_memorability,
+                left_value:             trial.left.value,
+                right_image_name:       trial.right.image_name,
+                right_image_path:       trial.right.image_path,
+                right_mem_bin:          trial.right.memorability_bin,
+                right_memorability:     trial.right.things_memorability,
+                right_value:            trial.right.value,
+                timestamp:              new Date().toISOString(),
             });
-        },
-    };
-
-    return {
-        timeline: [
-            choiceTrial,
-            buildHighlightTrial(jsPsych),
-            buildTooSlowTrial(),
-            buildFeedbackTrial(),
-            buildBlankCanvasTrial(params.iti),
-        ],
-        conditional_function() {
-            const { eligible } = getEligiblePair(TASK_STATE.seq_number);
-            return eligible;
         },
     };
 }
 
-// ─── Attention check ──────────────────────────────────────────────────────────
+// ─── Attention check + break ──────────────────────────────────────────────────
 function buildAttentionCheckTrial(attentionCheck) {
     const label = attentionCheck.correct_key.toUpperCase();
     return {
@@ -639,7 +542,7 @@ function buildInstructionPages() {
         </div>`,
 
         `<div class="instruction-container">
-            <p>Sometimes, you will see two cards reappear than you have seen before.</p>
+            <p>Sometimes, you will see <strong>two cards reappear</strong> that you have seen before.</p>
             <p>There is a trick that you can use to earn more money: <strong>each card is always worth the same amount of money</strong>.</p>
             <p>For example, <strong>the banana card is always worth ${maxVal}</strong>, if it reappears again.</p>
             <p><strong>So, you can use your memory to pick more valuable cards, and avoid less valuable ones!</strong></p>
@@ -784,13 +687,12 @@ function initTask(jsPsych, prolific_id) {
     const stimulusRows = loadStimulusMetadata();
     const plan = EpisodicChoiceSequence.buildSequencePlan(params, stimulusRows);
     TASK_STATE.plan = plan;
+    TASK_STATE.trialSpecByNumber = new Map(plan.trials.map(t => [t.trial_number, t]));
 
-    // Attach metadata to all trials
     jsPsych.data.addProperties({
         experiment_id:    params.experiment_id,
         participant_id:   prolific_id,
         possible_values:  JSON.stringify(params.possible_values),
-        n_enc:            params.n_enc,
         min_delay:        params.min_delay,
         max_delay:        params.max_delay,
         data_pipe_id:     params.data_pipe_id,
@@ -800,8 +702,8 @@ function initTask(jsPsych, prolific_id) {
     });
 
     // ── Preload ──────────────────────────────────────────────────────────────
-    const feedbackPaths   = params.possible_values.map(v => getFeedbackImagePath(v));
-    const blankPath       = `${params.feedback_dir}/blank.jpeg`;
+    const feedbackPaths    = params.possible_values.map(v => getFeedbackImagePath(v));
+    const blankPath        = `${params.feedback_dir}/blank.jpeg`;
     const instructionPaths = [
         `${params.instructions_img_dir}/banana_13s.jpg`,
         `${params.instructions_img_dir}/car_01b.jpg`,
@@ -924,37 +826,31 @@ function initTask(jsPsych, prolific_id) {
 
     timeline.push(buildBlankCanvasTrial(params.iti));
 
-    // ── Build attention check map ─────────────────────────────────────────────
+    // ── Attention check map ───────────────────────────────────────────────────
     const attentionKeys = "abcdefghijklmnopqrstuvwxyz"
         .split("").filter(k => k !== "j" && k !== "k" && k !== "x");
     const rngHelper = EpisodicChoiceSequence.makeRandomHelpers();
-    const attentionChecks = {};
-    params.attention_check_enc_indices.forEach(idx => {
-        attentionChecks[idx] = {
-            correct_key: rngHelper.sample(attentionKeys, 1)[0],
-            after_enc_index: idx,
-        };
+    const attentionCheckMap = {};
+    params.attention_check_trial_numbers.forEach(tn => {
+        attentionCheckMap[tn] = { correct_key: rngHelper.sample(attentionKeys, 1)[0] };
     });
 
     // ── Main trial loop ───────────────────────────────────────────────────────
-    plan.encodingTrials.forEach((encSpec, idx) => {
-        // Encoding trial bundle
-        timeline.push(buildEncodingChoiceTrial(jsPsych, encSpec));
+    plan.trials.forEach(trialSpec => {
+        if (trialSpec.trial_type === "new") {
+            timeline.push(buildEncodingChoiceTrial(jsPsych, trialSpec));
+        } else {
+            timeline.push(buildRetrievalChoiceTrial(jsPsych, trialSpec));
+        }
         timeline.push(buildHighlightTrial(jsPsych));
         timeline.push(buildTooSlowTrial());
         timeline.push(buildFeedbackTrial());
         timeline.push(buildBlankCanvasTrial(params.iti));
 
-        // Conditional retrieval bundle
-        timeline.push(buildConditionalRetrievalBundle(jsPsych));
-
-        // Attention check (after retrieval bundle, before break)
-        if (attentionChecks[idx]) {
-            timeline.push(buildAttentionCheckTrial(attentionChecks[idx]));
+        if (attentionCheckMap[trialSpec.trial_number]) {
+            timeline.push(buildAttentionCheckTrial(attentionCheckMap[trialSpec.trial_number]));
         }
-
-        // Block break
-        if (params.block_enc_boundaries.includes(idx)) {
+        if (params.block_trial_boundaries.includes(trialSpec.trial_number)) {
             timeline.push(buildBreakTrial());
         }
     });
@@ -976,11 +872,11 @@ function initTask(jsPsych, prolific_id) {
         choices: ["Submit data & end experiment"],
         on_finish(data) {
             const b = getBonusSummary(jsPsych);
-            data.is_summary          = true;
+            data.is_summary            = true;
             data.sampled_trial_numbers = JSON.stringify(b.sampledTrialNumbers);
-            data.sampled_rewards      = JSON.stringify(b.sampledRewards);
-            data.sampled_total        = b.sampledReward.toFixed(2);
-            data.final_bonus          = b.bonus.toFixed(2);
+            data.sampled_rewards       = JSON.stringify(b.sampledRewards);
+            data.sampled_total         = b.sampledReward.toFixed(2);
+            data.final_bonus           = b.bonus.toFixed(2);
         },
     });
 
