@@ -1,5 +1,7 @@
 (function () {
     const BIN_ORDER = ["high", "mid", "low"];
+
+    // ── Random helpers ────────────────────────────────────────────────────────
     function makeRandomHelpers(randomFn = Math.random) {
         return {
             random: randomFn,
@@ -28,93 +30,44 @@
         return Math.max(min, Math.min(max, value));
     }
 
-    function decimalScale(values) {
-        const decimals = values.map((value) => {
-            const text = String(value);
-            const dot = text.indexOf(".");
-            return dot === -1 ? 0 : text.length - dot - 1;
+    // Assigns old_side ('left'/'right') to old trials so that, within each
+    // memorability bin, left/right is balanced (26/26 for a 52-trial bin).
+    function assignBalancedOldSide(oldTrials, rng) {
+        const byBin = {};
+        oldTrials.forEach(t => {
+            (byBin[t.memorability_bin] = byBin[t.memorability_bin] || []).push(t);
         });
-        return 10 ** Math.max(0, ...decimals);
-    }
 
-    function findClosestRemainderCombo(valuesInt, remainder, targetSum) {
-        // Tiebreakers (after minimising |distance|):
-        //   1. maximise unique indices used  (most spread across values)
-        //   2. minimise sum of |index - centre|  (prefer middle values over extremes)
-        const centerIdx = (valuesInt.length - 1) / 2;
-        let bestCombo = null;
-        let bestDistance = Infinity;
-        let bestUniqueCount = -1;
-        let bestCenterDist = Infinity;
-
-        function recurse(startIndex, remainingCount, remainingTarget, current) {
-            if (remainingCount === 0) {
-                const distance = Math.abs(remainingTarget);
-                const uniqueCount = new Set(current).size;
-                const centerDist = current.reduce((sum, idx) => sum + Math.abs(idx - centerIdx), 0);
-
-                const isBetter =
-                    distance < bestDistance ||
-                    (distance === bestDistance && uniqueCount > bestUniqueCount) ||
-                    (distance === bestDistance && uniqueCount === bestUniqueCount && centerDist < bestCenterDist);
-
-                if (isBetter) {
-                    bestDistance = distance;
-                    bestUniqueCount = uniqueCount;
-                    bestCenterDist = centerDist;
-                    bestCombo = current.slice();
-                }
-                return;
-            }
-
-            for (let i = startIndex; i < valuesInt.length; i++) {
-                current.push(i);
-                recurse(i, remainingCount - 1, remainingTarget - valuesInt[i], current);
-                current.pop();
-            }
-        }
-
-        recurse(0, remainder, targetSum, []);
-        return bestCombo;
-    }
-
-    function buildBalancedValueList(n, possibleValues, rng) {
-        if (n <= 0) {
-            return [];
-        }
-
-        const sortedValues = possibleValues.slice().sort((a, b) => a - b);
-        const k = sortedValues.length;
-        const baseCount = Math.floor(n / k);
-        const remainder = n % k;
-        const counts = Array(k).fill(baseCount);
-
-        if (remainder > 0) {
-            const scale = decimalScale(sortedValues);
-            const scaledValues = sortedValues.map((value) => Math.round(value * scale));
-            const targetMean = mean(sortedValues);
-            const targetExtraSum = Math.round(remainder * targetMean * scale);
-            const extraCombo = findClosestRemainderCombo(scaledValues, remainder, targetExtraSum);
-
-            if (!extraCombo) {
-                throw new Error("Unable to build a balanced value list for the requested trial count.");
-            }
-
-            extraCombo.forEach((index) => {
-                counts[index] += 1;
+        Object.values(byBin).forEach(group => {
+            const shuffled = rng.shuffle(group);
+            const half = Math.floor(shuffled.length / 2);
+            shuffled.forEach((t, idx) => {
+                t.old_side = idx < half ? "left" : "right";
             });
-        }
-
-        const expanded = [];
-        counts.forEach((count, index) => {
-            for (let i = 0; i < count; i++) {
-                expanded.push(sortedValues[index]);
-            }
         });
-
-        return rng.shuffle(expanded);
     }
 
+    // Simple string hash (djb2) -> non-negative int, for deterministic-per-participant
+    // selection among the precomputed sequence structures.
+    function hashString(str) {
+        let hash = 5381;
+        for (let i = 0; i < str.length; i++) {
+            hash = ((hash << 5) + hash + str.charCodeAt(i)) | 0;
+        }
+        return Math.abs(hash);
+    }
+
+    function cumulativeBoundaries(blockSizes) {
+        const boundaries = [];
+        let total = 0;
+        blockSizes.forEach(size => {
+            total += size;
+            boundaries.push(total);
+        });
+        return boundaries;
+    }
+
+    // ── Stimulus normalization ────────────────────────────────────────────────
     function normalizeStimulusRows(rows, params) {
         if (!Array.isArray(rows) || rows.length === 0) {
             throw new Error("Stimulus metadata is missing or empty.");
@@ -137,44 +90,6 @@
                 selection_source: row.selection_source,
             };
         });
-    }
-
-    function validatePlannerInputs(params, groupedStimuli) {
-        if (params.n_trials % 3 !== 0) {
-            throw new Error("n_trials must be divisible by 3 so each triplet can contain high, mid, and low trials.");
-        }
-
-        if (!Array.isArray(params.block_sizes) || params.block_sizes.length === 0) {
-            throw new Error("block_sizes must be provided.");
-        }
-
-        const totalBlockTrials = params.block_sizes.reduce((sum, size) => sum + size, 0);
-        if (totalBlockTrials !== params.n_trials) {
-            throw new Error(`block_sizes sum to ${totalBlockTrials}, but n_trials is ${params.n_trials}.`);
-        }
-
-        if (params.block_sizes.some((size) => size % 3 !== 0)) {
-            throw new Error("Each block size must be divisible by 3 so no high/mid/low triplet is split by a break.");
-        }
-
-        if (params.old_trial_pct !== 0.5) {
-            throw new Error("This planner currently expects old_trial_pct to be exactly 0.5.");
-        }
-
-        const triplets = params.n_trials / 3;
-        if (triplets % 2 !== 0) {
-            throw new Error("The number of triplets must be even to split each memorability bin evenly into old and new trials.");
-        }
-
-        BIN_ORDER.forEach((bin) => {
-            if (!groupedStimuli[bin] || groupedStimuli[bin].length === 0) {
-                throw new Error(`No stimuli found for memorability bin "${bin}".`);
-            }
-        });
-    }
-
-    function buildTripletOrders(nTriplets, rng) {
-        return Array.from({ length: nTriplets }, () => rng.shuffle(BIN_ORDER));
     }
 
     function buildAttentionChecks(params, rng) {
@@ -206,228 +121,145 @@
         return checks.sort((a, b) => a.after_trial_number - b.after_trial_number);
     }
 
-    function solveBinTrialAssignments(binTrialNumbers, params, rng) {
-        const failedStates = new Set();
-
-        function stateKey(position, openSources) {
-            return `${position}|${openSources.join(",")}`;
-        }
-
-        function recurse(position, openSources) {
-            if (position === binTrialNumbers.length) {
-                return openSources.length === 0 ? [] : null;
-            }
-
-            const currentTrialNumber = binTrialNumbers[position];
-            if (openSources.some((sourceTrialNumber) => currentTrialNumber - sourceTrialNumber > params.max_delay)) {
-                return null;
-            }
-
-            const remainingCount = binTrialNumbers.length - position;
-            if (openSources.length > remainingCount) {
-                return null;
-            }
-
-            const key = stateKey(position, openSources);
-            if (failedStates.has(key)) {
-                return null;
-            }
-
-            const eligibleSources = openSources.filter(
-                (sourceTrialNumber) =>
-                    currentTrialNumber - sourceTrialNumber >= params.min_delay &&
-                    currentTrialNumber - sourceTrialNumber <= params.max_delay
-            );
-
-            const branchOrder = rng.shuffle(["new", "old"]);
-
-            for (const branch of branchOrder) {
-                if (branch === "old" && eligibleSources.length > 0) {
-                    const sourceOrder = rng.shuffle(eligibleSources);
-                    for (const sourceTrialNumber of sourceOrder) {
-                        const nextOpen = openSources.filter((value) => value !== sourceTrialNumber);
-                        const remainder = recurse(position + 1, nextOpen);
-                        if (remainder) {
-                            return [{
-                                trial_number: currentTrialNumber,
-                                trial_type: "old",
-                                source_trial_number: sourceTrialNumber,
-                            }].concat(remainder);
-                        }
-                    }
-                }
-
-                if (branch === "new") {
-                    const nextOpen = openSources.concat([currentTrialNumber]).sort((a, b) => a - b);
-                    const remainder = recurse(position + 1, nextOpen);
-                    if (remainder) {
-                        return [{
-                            trial_number: currentTrialNumber,
-                            trial_type: "new",
-                            source_trial_number: null,
-                        }].concat(remainder);
-                    }
-                }
-            }
-
-            failedStates.add(key);
-            return null;
-        }
-
-        const solution = recurse(0, []);
-        if (!solution) {
-            throw new Error("Unable to assign old/new trial roles within the requested delay window.");
-        }
-        return solution;
-    }
-
-    function buildSequencePlan(params, metadataRows, randomFn = Math.random) {
+    // ── Main plan builder ─────────────────────────────────────────────────────
+    /**
+     * buildSequencePlan
+     * -----------------
+     * Loads one of the precomputed structural solutions
+     * (window.SEQUENCE_STRUCTURES, produced offline by
+     * sequences/build_sequences.py's two-phase MILP), selected deterministically
+     * per participant (hash of participantId mod length, so a page reload keeps
+     * the same structure), and fills it in with randomly assigned concrete
+     * images (per participant) and randomized left/right screen placement.
+     *
+     * The MILP guarantees, exactly:
+     *   - 312 trials: 156 new (encoding) + 156 old (retrieval), 52 of each per
+     *     memorability bin (high/mid/low)
+     *   - new trials: 2 fresh same-bin images sharing one value, 26 $1 / 26 $0
+     *     per bin. The chosen image becomes the source for exactly one old
+     *     trial in the same bin.
+     *   - old trials: 1 previously-chosen ("old") card + 1 brand-new ("lure")
+     *     card, both same bin. old-card value 26/26 per bin (inherited from
+     *     its source trial); lure-card value independently 26/26 per bin.
+     *   - delay (trial_number - source_trial_number) in [min_delay, max_delay],
+     *     with identical delay-bucket histograms across bins and across old-
+     *     card value classes within a bin
+     *   - no run of >3 consecutive same-bin trials (old or new)
+     *   - no run of >8 consecutive same trial_type (old/new) trials
+     *
+     * Returns { trials, attention_checks, preload_images, normalized_stimuli }.
+     *
+     * Encoding trials (trial_type: 'new'):
+     *   left_stimulus / right_stimulus  – stimulus objects
+     *   shared_value   – $0 or $1 (participant only learns the value of
+     *     whichever card they choose)
+     *
+     * Retrieval trials (trial_type: 'old'):
+     *   source_trial_number  – the new trial whose chosen card reappears here
+     *   delay                – trial_number - source_trial_number
+     *   lure_stimulus / lure_value  – the brand-new companion card
+     *   old_side  – 'left' or 'right'; assigned by assignBalancedOldSide so
+     *     that, within each bin, left/right is balanced (26/26)
+     *   fallback_side  – random side used only if no choice was ever recorded
+     *     for the source trial (e.g. a missed response)
+     */
+    function buildSequencePlan(params, metadataRows, randomFn = Math.random, participantId = "") {
         const rng = makeRandomHelpers(randomFn);
+        const structures = window.SEQUENCE_STRUCTURES;
+        if (!Array.isArray(structures) || structures.length === 0) {
+            throw new Error("Sequence structures missing. Make sure sequences/sequences.js is loaded.");
+        }
+
+        if (!params.block_sizes || params.block_sizes.reduce((s, v) => s + v, 0) !== params.n_trials) {
+            throw new Error(`block_sizes must sum to n_trials (${params.n_trials}).`);
+        }
+        if (params.old_trial_pct !== 0.5) {
+            throw new Error("This planner currently expects old_trial_pct to be exactly 0.5.");
+        }
+
+        const structureIndex = hashString(String(participantId)) % structures.length;
+        const structure = structures[structureIndex];
+        const structTrials = structure.trials;
+
         const normalizedStimuli = normalizeStimulusRows(metadataRows, params);
         const groupedStimuli = { high: [], mid: [], low: [] };
-
         normalizedStimuli.forEach((stimulus) => {
             groupedStimuli[stimulus.memorability_bin].push(stimulus);
         });
-
-        validatePlannerInputs(params, groupedStimuli);
-
-        const nTriplets = params.n_trials / 3;
-        const nOldPerBin = nTriplets / 2;
-        const nNewPerBin = nTriplets / 2;
-        const tripletOrders = buildTripletOrders(nTriplets, rng);
-        const sourcePayloads = {};
-        const oldPayloads = {};
-
-        const trials = [];
-
-        tripletOrders.forEach((binOrder, tripletIndex) => {
-            binOrder.forEach((bin) => {
-                const trial = {
-                    trial_number: trials.length + 1,
-                    triplet_index: tripletIndex,
-                    memorability_bin: bin,
-                    trial_type: null,
-                    left_stimulus: null,
-                    right_stimulus: null,
-                    shared_value: null,
-                    source_index: null,
-                    source_triplet_index: null,
-                    lure_stimulus: null,
-                    lure_value: null,
-                    old_side: null,
-                    fallback_side: null,
-                    source_trial_number: null,
-                    delay: null,
-                    block_index: null,
-                };
-
-                trials.push(trial);
-            });
+        BIN_ORDER.forEach((bin) => {
+            if (!groupedStimuli[bin] || groupedStimuli[bin].length === 0) {
+                throw new Error(`No stimuli found for memorability bin "${bin}".`);
+            }
+            groupedStimuli[bin] = rng.shuffle(groupedStimuli[bin]);
         });
 
         BIN_ORDER.forEach((bin) => {
-            const binTrials = trials.filter((trial) => trial.memorability_bin === bin);
-            const binTrialNumbers = binTrials.map((trial) => trial.trial_number);
-            const assignments = solveBinTrialAssignments(binTrialNumbers, params, rng);
-            const assignmentByTrialNumber = new Map(assignments.map((assignment) => [assignment.trial_number, assignment]));
-
-            const shuffledStimuli = rng.shuffle(groupedStimuli[bin]);
-            const requiredStimuli = nNewPerBin * 2 + nOldPerBin;
-            if (shuffledStimuli.length < requiredStimuli) {
-                throw new Error(
-                    `Bin "${bin}" needs at least ${requiredStimuli} stimuli for this design, but found ${shuffledStimuli.length}.`
-                );
+            const nNew = structTrials.filter(t => t.trial_type === 'new' && t.memorability_bin === bin).length;
+            const nOld = structTrials.filter(t => t.trial_type === 'old' && t.memorability_bin === bin).length;
+            const required = nNew * 2 + nOld;
+            if (groupedStimuli[bin].length < required) {
+                throw new Error(`Bin "${bin}" needs at least ${required} stimuli for this design, but found ${groupedStimuli[bin].length}.`);
             }
-            const selectedStimuli = shuffledStimuli.slice(0, requiredStimuli);
+        });
 
-            const sourceValues = buildBalancedValueList(nNewPerBin, params.possible_values, rng);
-            const lureValues = buildBalancedValueList(nOldPerBin, params.possible_values, rng);
-            const nLeftOld = Math.floor(nOldPerBin / 2);
-            const nRightOld = nOldPerBin - nLeftOld;
-            const oldSides = rng.shuffle(
-                Array(nLeftOld).fill("left").concat(Array(nRightOld).fill("right"))
-            );
+        const cursor = { high: 0, mid: 0, low: 0 };
+        const blockBoundaries = cumulativeBoundaries(params.block_sizes);
+        function getBlockIndex(t) {
+            for (let i = 0; i < blockBoundaries.length; i++) {
+                if (t <= blockBoundaries[i]) return i + 1;
+            }
+            return blockBoundaries.length;
+        }
 
-            sourcePayloads[bin] = new Map();
-            oldPayloads[bin] = new Map();
+        const trials = structTrials.map(st => {
+            const block_index = getBlockIndex(st.trial_number);
+            const bin = st.memorability_bin;
 
-            const newTrialNumbers = assignments
-                .filter((assignment) => assignment.trial_type === "new")
-                .map((assignment) => assignment.trial_number)
-                .sort((a, b) => a - b);
-            const oldAssignments = assignments
-                .filter((assignment) => assignment.trial_type === "old")
-                .sort((a, b) => a.trial_number - b.trial_number);
-
-            newTrialNumbers.forEach((trialNumber, sourceIndex) => {
-                sourcePayloads[bin].set(trialNumber, {
-                    trial_type: "new",
+            if (st.trial_type === 'new') {
+                const s1 = groupedStimuli[bin][cursor[bin]++];
+                const s2 = groupedStimuli[bin][cursor[bin]++];
+                return {
+                    trial_number: st.trial_number,
+                    block_index,
+                    triplet_index: null,
+                    trial_type: 'new',
                     memorability_bin: bin,
-                    left_stimulus: selectedStimuli[sourceIndex * 2],
-                    right_stimulus: selectedStimuli[sourceIndex * 2 + 1],
-                    shared_value: sourceValues[sourceIndex],
-                    source_index: sourceIndex,
-                });
-            });
-
-            oldAssignments.forEach((assignment, oldIndex) => {
-                oldPayloads[bin].set(assignment.trial_number, {
-                    trial_type: "old",
-                    memorability_bin: bin,
-                    source_trial_number: assignment.source_trial_number,
-                    lure_stimulus: selectedStimuli[nNewPerBin * 2 + oldIndex],
-                    lure_value: lureValues[oldIndex],
-                    old_side: oldSides[oldIndex],
-                    fallback_side: rng.sample(["left", "right"], 1)[0],
-                    old_index: oldIndex,
-                });
-            });
-        });
-
-        let blockRunningTotal = 0;
-        let blockIndex = 0;
-        params.block_sizes.forEach((size, index) => {
-            const blockStart = blockRunningTotal + 1;
-            const blockEnd = blockRunningTotal + size;
-            for (let trialNumber = blockStart; trialNumber <= blockEnd; trialNumber++) {
-                trials[trialNumber - 1].block_index = index + 1;
-            }
-            blockRunningTotal = blockEnd;
-            blockIndex = index + 1;
-        });
-
-        trials.forEach((trial) => {
-            const payload = sourcePayloads[trial.memorability_bin].get(trial.trial_number)
-                || oldPayloads[trial.memorability_bin].get(trial.trial_number);
-
-            if (!payload) {
-                throw new Error(`Missing payload for trial ${trial.trial_number} (${trial.memorability_bin}).`);
+                    left_stimulus: s1,
+                    right_stimulus: s2,
+                    shared_value: st.shared_value,
+                };
             }
 
-            Object.assign(trial, payload);
-
-            if (trial.trial_type === "old") {
-                trial.delay = trial.trial_number - trial.source_trial_number;
-            }
+            const lureStimulus = groupedStimuli[bin][cursor[bin]++];
+            return {
+                trial_number: st.trial_number,
+                block_index,
+                triplet_index: null,
+                trial_type: 'old',
+                memorability_bin: bin,
+                source_trial_number: st.old_source_trial_number,
+                delay: st.delay,
+                old_side: null,   // assigned below by assignBalancedOldSide
+                lure_stimulus: lureStimulus,
+                lure_value: st.new_card_value,
+                fallback_side: rng.sample(["left", "right"], 1)[0],
+            };
         });
 
-        const delays = trials.filter((trial) => trial.trial_type === "old").map((trial) => trial.delay);
-        if (delays.some((delay) => delay < params.min_delay || delay > params.max_delay)) {
+        assignBalancedOldSide(trials.filter(t => t.trial_type === 'old'), rng);
+
+        const delays = trials.filter(t => t.trial_type === 'old').map(t => t.delay);
+        if (delays.some(d => d < params.min_delay || d > params.max_delay)) {
             throw new Error(`Found an old-trial delay outside [${params.min_delay}, ${params.max_delay}].`);
         }
 
-        if (trials.slice(0, params.min_delay).some((trial) => trial.trial_type === "old")) {
-            throw new Error("An old trial was scheduled before the minimum delay window had elapsed.");
-        }
-
-        const attentionChecks = buildAttentionChecks(params, rng);
-
         return {
             trials,
-            attention_checks: attentionChecks,
+            attention_checks: buildAttentionChecks(params, rng),
             preload_images: normalizedStimuli.map((stimulus) => stimulus.image_path),
             normalized_stimuli: normalizedStimuli,
+            structure_index: structureIndex,
+            structure_seed: structure.metadata ? structure.metadata.seed : null,
         };
     }
 
@@ -482,7 +314,6 @@
         BIN_ORDER,
         clamp,
         makeRandomHelpers,
-        buildBalancedValueList,
         buildSequencePlan,
         summarizePlan,
     };

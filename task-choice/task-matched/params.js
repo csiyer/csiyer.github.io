@@ -1,14 +1,16 @@
 const params = {
-    experiment_id: "mixed_memorability-7-3-26",
+    experiment_id: "matched_memorability-7-3-26",
 
-    // Trial structure (computed by buildSequencePlan; shown here for reference)
+    // Trial structure (fixed by the precomputed sequence structures; see sequences/)
     //   78 H/H encoding + 78 L/L encoding + 78 old/old = 234 trials total
-    //   old/old = 1/3 of trials; types 1&2 exactly 20 each, types 3&4 exactly 19 each
-    //   delay direction exactly 39/39 H-first vs L-first; delay_H ≈ delay_L (by construction)
+    //   old/old trials are always within-bin (H/H or L/L) and always uneven in
+    //   value (one $1 source + one $0 source)
+    //   delay histogram (per bin, per value condition) identical: d7-9=4, d10-12=5, d13-15=4
+    //   $1-source-longer-delay vs $0-source-longer-delay split exactly 39/39
     n_blocks: 3,
-    block_trial_boundaries: [77, 154],  // break inserted after trial at these numbers
+    block_trial_boundaries: [78, 156],  // break inserted after trial at these numbers
     n_attention_checks: 3,
-    attention_check_trial_numbers: [25, 103, 180],
+    attention_check_trial_numbers: [25, 103, 181],
 
     min_delay: 7,
     max_delay: 15,

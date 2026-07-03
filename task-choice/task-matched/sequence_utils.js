@@ -22,28 +22,32 @@
         return Math.max(min, Math.min(max, value));
     }
 
-    // Assigns left_is_high to old trials so that, within each retrieval_type x
-    // "which side has the longer delay" group, left/right is balanced. Because
-    // retrieval_type fixes h_value/l_value, and each group here is split further
-    // by which side is longer, this balances left/right simultaneously against
-    // value and delay-length -- same spirit as the matched-memorability
-    // assignBalancedLeftRight, generalized to 4 retrieval types instead of a
-    // single (bin, value) pairing. Group sizes are small (roughly 5-10), so the
-    // split can be off by at most 1 trial per group.
+    // Assigns left_is_value1 to old trials so that, within each memorability bin,
+    // left/right is balanced both on which side has the longer delay AND on which
+    // side is $1 vs $0 -- these two balances are linked (left_longer === (left_is_value1
+    // === value1IsLonger)), so splitting each "value1 is the longer delay" / "value0 is
+    // the longer delay" subgroup exactly in half achieves both simultaneously. With 39
+    // trials per bin the split can't be perfectly even (odd count), so this gets as close
+    // as possible (off by at most 1 trial on one axis).
     function assignBalancedLeftRight(oldTrials, rng) {
-        const groups = {};
+        const byBin = {};
         oldTrials.forEach(t => {
-            const highLonger = t.delay_h > t.delay_l;
-            const key = `${t.ret_type}_${highLonger}`;
-            (groups[key] = groups[key] || []).push(t);
+            (byBin[t.memorability_bin] = byBin[t.memorability_bin] || []).push(t);
         });
 
-        Object.values(groups).forEach(group => {
+        function assignHalfLeft(group) {
             const shuffled = rng.shuffle(group);
             const half = Math.floor(shuffled.length / 2);
             shuffled.forEach((t, idx) => {
-                t.left_is_high = idx < half;
+                t.left_is_value1 = idx < half;
             });
+        }
+
+        Object.values(byBin).forEach(binTrials => {
+            const value1Longer = binTrials.filter(t => t.delay_value1 > t.delay_value0);
+            const value0Longer = binTrials.filter(t => t.delay_value0 > t.delay_value1);
+            assignHalfLeft(value1Longer);
+            assignHalfLeft(value0Longer);
         });
     }
 
@@ -56,16 +60,6 @@
         }
         return Math.abs(hash);
     }
-
-    // Numeric ret_type codes retained for backward-compat with existing analysis
-    // scripts (episodic-choice-task/analysis.R / .ipynb expect 1-4):
-    //   1: H=$0, L=$1     2: H=$1, L=$0     3: both $0     4: both $1
-    const RET_TYPE_CODES = {
-        uneven_h0: 1,
-        uneven_h1: 2,
-        even_0:    3,
-        even_1:    4,
-    };
 
     // ── Stimulus normalization ────────────────────────────────────────────────
     function normalizeStimulusRows(rows, params) {
@@ -96,24 +90,18 @@
      * -----------------
      * Loads one of the 10 precomputed structural solutions
      * (window.SEQUENCE_STRUCTURES, produced offline by
-     * sequences/build_sequences.py's two-phase MILP), selected deterministically
+     * sequences/simulate_design.py's two-phase MILP), selected deterministically
      * per participant (hash of participantId mod length, so a page reload keeps
      * the same structure), and fills it in with randomly assigned concrete
      * images (per participant) and randomized left/right screen placement.
      *
      * The MILP guarantees, exactly:
-     *   - 78 high-mem + 78 low-mem new (encoding) trials, each split 39 $1 / 39 $0
-     *   - 78 old (retrieval) trials, always cross-bin (one high-mem source + one
-     *     low-mem source): 20 even_1 (both $1) + 20 even_0 (both $0) +
-     *     19 uneven_h1 (high=$1/low=$0) + 19 uneven_h0 (high=$0/low=$1)
-     *   - identical delay-bucket histograms for the high-mem source and the
-     *     low-mem source, within each of the "even" and "uneven" groups
-     *   - exactly 19/19 split (within uneven trials) of which value has the
-     *     longer delay, and 20/20 split (within even trials) of which
-     *     memorability side has the longer delay
-     *   - no run of >3 consecutive same-bin new trials (old trials, always
-     *     showing one high + one low card, break any run)
-     *   - no run of >8 consecutive same trial_type (old/new) trials
+     *   - 78 H/H + 78 L/L new (encoding) trials, each bin split 39 $1 / 39 $0
+     *   - 78 old (retrieval) trials, always within-bin, always one $1 + one $0
+     *     source, delay in [min_delay, max_delay]
+     *   - identical delay-bucket histograms for $1-sources and $0-sources,
+     *     identical between high-mem and low-mem old trials
+     *   - exactly 39/39 split of which value condition has the longer delay
      *
      * Returns { trials, preload_images, normalized_stimuli }.
      *
@@ -123,13 +111,12 @@
      *   shared_value   – $0 or $1
      *
      * Retrieval trials (trial_type: 'old'):
-     *   ret_type                – 1-4 (see RET_TYPE_CODES above)
-     *   source_hh_trial_number / source_ll_trial_number
-     *   h_value / l_value
-     *   delay_h / delay_l
-     *   left_is_high  – whether left card is the high-mem item; assigned by
-     *     assignBalancedLeftRight so that, within each retrieval type, left/right
-     *     is balanced against which side has the longer delay.
+     *   value1_source_trial_number / value0_source_trial_number
+     *   delay_value1 / delay_value0
+     *   left_is_value1  – whether left card is the $1 item; assigned by
+     *     assignBalancedLeftRight so that, within each memorability bin, left/right
+     *     is balanced both on which side is $1 vs $0 and on which side has the
+     *     longer delay (as close to even as the odd bin size of 39 allows -- 19/20).
      */
     function buildSequencePlan(params, metadataRows, randomFn = Math.random, participantId = "") {
         const rng = makeRandomHelpers(randomFn);
@@ -146,15 +133,13 @@
 
         const structTrials = structure.trials;
         const newStructTrials = structTrials.filter(t => t.trial_type === 'new');
-        const nHigh = newStructTrials.filter(t => t.memorability_bin === 'high').length;
-        const nLow  = newStructTrials.filter(t => t.memorability_bin === 'low').length;
+        const nHH = newStructTrials.filter(t => t.memorability_bin === 'high').length;
+        const nLL = newStructTrials.filter(t => t.memorability_bin === 'low').length;
 
-        if (highStim.length < nHigh * 2 || lowStim.length < nLow * 2) {
+        if (highStim.length < nHH * 2 || lowStim.length < nLL * 2) {
             throw new Error("Not enough high or low-mem stimuli to fill the precomputed sequence structure.");
         }
 
-        // Each 'new' structure entry is one HH/LL encoding trial, consuming 2
-        // same-bin stimuli (shown together, sharing one value).
         let highCursor = 0, lowCursor = 0;
         const blockBoundaries = params.block_trial_boundaries;
         function getBlockIndex(t) {
@@ -171,29 +156,26 @@
                 const s2 = isHigh ? highStim[highCursor++] : lowStim[lowCursor++];
                 const leftIsFirst = rng.random() < 0.5;
                 return {
-                    trial_number:     st.trial_number,
+                    trial_number:   st.trial_number,
                     block_index,
-                    trial_type:       'new',
-                    enc_type:         isHigh ? 'HH' : 'LL',
+                    trial_type:     'new',
+                    enc_type:       isHigh ? 'HH' : 'LL',
                     memorability_bin: st.memorability_bin,
-                    left_stimulus:    leftIsFirst ? s1 : s2,
-                    right_stimulus:   leftIsFirst ? s2 : s1,
-                    shared_value:     st.shared_value,
+                    left_stimulus:  leftIsFirst ? s1 : s2,
+                    right_stimulus: leftIsFirst ? s2 : s1,
+                    shared_value:   st.shared_value,
                 };
             }
             return {
-                trial_number:            st.trial_number,
+                trial_number:               st.trial_number,
                 block_index,
-                trial_type:              'old',
-                ret_type:                RET_TYPE_CODES[st.retrieval_type],
-                retrieval_type:          st.retrieval_type,
-                source_hh_trial_number:  st.high_source_trial_number,
-                source_ll_trial_number:  st.low_source_trial_number,
-                h_value:                 st.value_high,
-                l_value:                 st.value_low,
-                delay_h:                 st.delay_high,
-                delay_l:                 st.delay_low,
-                left_is_high:            null,   // assigned below by assignBalancedLeftRight
+                trial_type:                 'old',
+                memorability_bin:           st.memorability_bin,
+                value1_source_trial_number: st.value1_source_trial_number,
+                value0_source_trial_number: st.value0_source_trial_number,
+                delay_value1:               st.delay_value1,
+                delay_value0:               st.delay_value0,
+                left_is_value1:             null,   // assigned below by assignBalancedLeftRight
             };
         });
 

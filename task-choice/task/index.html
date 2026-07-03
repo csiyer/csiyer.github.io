@@ -14,6 +14,7 @@
     <script src="https://unpkg.com/@jspsych/plugin-preload@2.1.0"></script>
     <script src="https://unpkg.com/@jspsych/plugin-fullscreen@2.0.0"></script>
     <script src="https://unpkg.com/@jspsych-contrib/plugin-pipe@0.5.0"></script>
+    <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
     <link rel="stylesheet" href="https://unpkg.com/jspsych@8.2.3/css/jspsych.css">
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -210,12 +211,22 @@
             display: block;
             margin: 0 auto;
         }
+
+        /* Turnstile verification styles */
+        .turnstile-page { text-align: center; }
+        .turnstile-page h2 { font-size: 36px; margin-bottom: 20px; color: white; }
+        .turnstile-page p { font-size: 24px; color: #b3b3b3; margin-bottom: 30px; }
+        .turnstile-widget { display: flex; justify-content: center; margin-bottom: 20px; }
+        .turnstile-status { font-size: 22px; margin-top: 20px; min-height: 30px; }
+        .turnstile-success { color: #4CAF50; }
+        .turnstile-fail { color: #f44336; }
     </style>
 </head>
 
 <body>
     <script src="params.js"></script>
     <script src="../../stimuli/stimuli_metadata.js"></script>
+    <script src="sequences/sequences.js"></script>
     <script src="sequence_utils.js"></script>
     <script src="task.js"></script>
     <script>
