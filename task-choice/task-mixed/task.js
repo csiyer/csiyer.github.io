@@ -749,6 +749,8 @@ function initTask(jsPsych, prolific_id) {
         possible_values:  JSON.stringify(params.possible_values),
         min_delay:        params.min_delay,
         max_delay:        params.max_delay,
+        sequence_structure_index: plan.structure_index,
+        sequence_structure_seed:  plan.structure_seed,
         data_pipe_id:     params.data_pipe_id,
         osf_project_id:   params.osf_project_id,
         osf_component_id: params.osf_component_id,

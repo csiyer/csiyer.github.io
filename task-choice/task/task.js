@@ -650,6 +650,8 @@ function initTask(jsPsych, prolific_id) {
         planned_trials: params.n_trials,
         planned_blocks: JSON.stringify(params.block_sizes),
         sequence_summary: JSON.stringify(summary),
+        sequence_structure_index: plan.structure_index,
+        sequence_structure_seed: plan.structure_seed,
         data_pipe_id: params.data_pipe_id,
         osf_project_id: params.osf_project_id,
         osf_component_id: params.osf_component_id,
