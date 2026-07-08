@@ -81,7 +81,6 @@ window.SP = window.SP || {};
       wrap(
         '<h2>Your task</h2>' +
         '<p>When the outcome appears:</p>' +
-        '<strong>outcome</strong> appears.</p>' +
         '<p>Press ' + UP + ' when the outcome is a <strong>reward</strong> (quarter).<br>' +
         'Press ' + DOWN + ' when it is <strong>nothing</strong> (black circle).</p>' +
         '<p>You don’t need to press anything for the picture, just the outcome.</p>' +
