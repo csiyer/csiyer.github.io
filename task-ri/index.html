@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Image &amp; Decision Study</title>
+
+  <!-- jsPsych v8 core (explicit browser build — the bare package URL serves a non-executable MIME) -->
+  <script src="https://cdn.jsdelivr.net/npm/jspsych@8.2.3/dist/index.browser.min.js"></script>
+  <link href="https://cdn.jsdelivr.net/npm/jspsych@8.2.3/css/jspsych.css" rel="stylesheet" />
+
+  <!-- jsPsych plugins (v8-compatible @2.1.0) -->
+  <script src="https://cdn.jsdelivr.net/npm/@jspsych/plugin-preload@2.1.0/dist/index.browser.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@jspsych/plugin-fullscreen@2.1.0/dist/index.browser.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@jspsych/plugin-instructions@2.1.0/dist/index.browser.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@jspsych/plugin-html-keyboard-response@2.1.0/dist/index.browser.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@jspsych/plugin-html-button-response@2.1.0/dist/index.browser.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@jspsych/plugin-html-slider-response@2.1.0/dist/index.browser.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@jspsych/plugin-survey-html-form@2.1.0/dist/index.browser.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@jspsych/plugin-call-function@2.1.0/dist/index.browser.min.js"></script>
+
+  <!-- DataPipe (OSF) save plugin -->
+  <script src="https://cdn.jsdelivr.net/npm/@jspsych-contrib/plugin-pipe@0.6.0/dist/index.browser.min.js"></script>
+
+  <!-- Cloudflare Turnstile (bot check) -->
+  <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
+
+  <!-- fonts + theme -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+  <link href="css/style.css" rel="stylesheet" />
+</head>
+<body>
+  <!-- experiment modules, loaded in dependency order -->
+  <script src="js/config.js"></script>
+  <script src="js/rng.js"></script>
+  <script src="js/design.js"></script>
+  <script src="js/stimuli.js"></script>
+  <script src="js/instructions.js"></script>
+  <script src="js/phases.js"></script>
+  <script src="js/data.js"></script>
+  <script src="js/experiment.js"></script>
+</body>
+</html>

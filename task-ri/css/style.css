@@ -1,0 +1,186 @@
+/* style.css — clean-minimal theme. Neutral surround so visuals don't bias likeability. */
+
+:root {
+  --bg: #F7F6F3;
+  --card: #FFFFFF;
+  --text: #2A2A2A;
+  --muted: #6B7280;
+  --faint: #9A9A9A;
+  --btn: #3A3A3A;
+  --btn-hover: #555555;
+  --border: #E6E4DF;
+  --accent: #4F5B66;
+  --img-px: 300px;
+}
+
+html, body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-size: 17px;
+  line-height: 1.6;
+  margin: 0;
+  padding: 0;
+}
+
+/* jsPsych mounts content here; give it a calm, centered card. */
+.jspsych-display-element { display: flex; align-items: center; justify-content: center; }
+
+.jspsych-content-wrapper { display: flex; align-items: center; justify-content: center; }
+
+.jspsych-content {
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 40px 48px;
+  animation: fadeIn 0.16s ease;
+}
+
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+/* Readable instruction prose (left-aligned within centered card). */
+.instr { text-align: left; }
+.instr h1, .instr h2 { font-weight: 600; letter-spacing: -0.01em; }
+.instr p { margin: 0.8em 0; }
+.instr .key { font-weight: 600; color: var(--accent); white-space: nowrap; }
+.lead { color: var(--muted); }
+
+/* Stimulus image, centered, with neutral surround. */
+.stim-wrap { position: relative; display: inline-block; width: var(--img-px); height: var(--img-px); }
+.stim-img {
+  width: var(--img-px); height: var(--img-px);
+  object-fit: contain; display: block;
+  border-radius: 6px;
+}
+
+/* Gray cover dot overlaid on a stimulus. */
+.cover-dot {
+  position: absolute;
+  width: 18px; height: 18px;
+  border-radius: 50%;
+  background: #7d7d7d;
+  pointer-events: none;
+}
+
+/* Reward / no-reward outcome icon. */
+.outcome-wrap { display: flex; align-items: center; justify-content: center; min-height: var(--img-px); }
+.outcome-img { width: 180px; height: 180px; object-fit: contain; }
+
+/* Fixation cross. */
+.fixation {
+  font-size: 40px; color: var(--faint); font-weight: 400;
+  display: flex; align-items: center; justify-content: center; min-height: var(--img-px);
+}
+
+.too-slow { color: #cc3333; font-size: 28px; font-weight: 700; min-height: var(--img-px);
+  display: flex; align-items: center; justify-content: center; }
+
+/* Cloudflare Turnstile bot check. */
+.turnstile-page { text-align: center; padding: 40px 0; }
+.turnstile-widget, #turnstile-container { display: flex; justify-content: center; margin-bottom: 16px; }
+.turnstile-status { font-size: 15px; min-height: 22px; color: var(--muted); }
+.turnstile-success { color: #3a7d4f; }
+.turnstile-fail { color: #b04a4a; }
+
+/* ---- buttons ---- */
+.jspsych-btn {
+  background: var(--btn);
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 12px 22px;
+  font-family: inherit;
+  font-size: 16px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.12s ease, opacity 0.12s ease;
+  margin: 6px;
+}
+.jspsych-btn:hover { background: var(--btn-hover); }
+.jspsych-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+
+/* ---- decision 2AFC ---- */
+.dec-prompt {
+  font-size: 22px; font-weight: 600; margin-bottom: 8px;
+  transition: color 0.15s ease, opacity 0.15s ease;
+}
+.dec-prompt.locked { color: var(--faint); opacity: 0.7; }
+.dec-sub { color: var(--muted); font-size: 15px; margin-bottom: 28px; min-height: 1.2em; }
+
+/* jsPsych renders the choice buttons inside .jspsych-html-button-response-btngroup */
+#jspsych-html-button-response-btngroup,
+.jspsych-html-button-response-btngroup {
+  display: flex; justify-content: center; gap: 64px; flex-wrap: nowrap;
+}
+.choice-btn {
+  background: var(--card) !important;
+  border: 2px solid var(--border) !important;
+  border-radius: 12px !important;
+  padding: 14px !important;
+  margin: 0 !important;
+  transition: border-color 0.12s ease, transform 0.08s ease, box-shadow 0.12s ease;
+}
+.choice-btn:not(:disabled):hover {
+  border-color: var(--accent) !important;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 18px rgba(0,0,0,0.08);
+}
+.choice-btn:disabled { opacity: 0.92 !important; cursor: default; }
+.choice-img { width: 240px; height: 240px; object-fit: contain; display: block; border-radius: 6px; }
+
+/* non-interactive preview row (matches the clickable choice layout) */
+.dec-row { display: flex; justify-content: center; gap: 64px; }
+.dec-frame { border: 2px solid transparent; border-radius: 12px; padding: 14px; }
+
+/* ---- rating slider ---- */
+.rate-img { width: var(--img-px); height: var(--img-px); object-fit: contain; display: block; margin: 0 auto 22px; border-radius: 6px; }
+.rate-q { font-size: 19px; font-weight: 500; margin-bottom: 8px; }
+
+/* Continuous range slider — visible on the light card (dark track, blue marker, like the lab). */
+.jspsych-content input[type=range] {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 8px;
+  border-radius: 4px;
+  background: #6B7280;            /* medium-dark track, clearly visible on #FFF card */
+  outline: none;
+  cursor: pointer;
+  margin: 18px 0 8px;
+}
+.jspsych-content input[type=range]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 24px; height: 24px;
+  border-radius: 50%;
+  background: #3b5bdb;            /* blue marker (in-lab marker color) */
+  border: 2px solid #FFFFFF;
+  box-shadow: 0 1px 5px rgba(0, 0, 0, 0.3);
+  cursor: pointer;
+  margin-top: -8px;              /* center 24px thumb on 8px track */
+}
+.jspsych-content input[type=range]::-moz-range-track {
+  height: 8px; border-radius: 4px; background: #6B7280;
+}
+.jspsych-content input[type=range]::-moz-range-thumb {
+  width: 24px; height: 24px; border-radius: 50%;
+  background: #3b5bdb; border: 2px solid #FFFFFF;
+  box-shadow: 0 1px 5px rgba(0, 0, 0, 0.3); cursor: pointer;
+}
+/* slider anchor labels rendered by jsPsych */
+.jspsych-slider-label { color: var(--muted); font-size: 14px; }
+
+/* ---- progress bar (subtle) ---- */
+#jspsych-progressbar-container {
+  background: transparent;
+  border-bottom: 1px solid var(--border);
+  color: var(--muted);
+  font-size: 13px;
+  padding: 8px 0;
+}
+#jspsych-progressbar-inner { background: var(--accent); }
+
+/* ---- comprehension feedback ---- */
+.comp-q { font-size: 19px; font-weight: 500; text-align: left; margin-bottom: 18px; }
+.comp-retry { color: #b04a4a; margin-bottom: 14px; }
+
+/* continue hint */
+.continue-hint { color: var(--muted); font-size: 14px; margin-top: 26px; }
