@@ -27,8 +27,30 @@ window.SP = window.SP || {};
     return { task: task, example: example, selectionRows: selectionRows };
   }
 
-  // --- assignment: pairs, reward status, roles ---------------------------------------
-  // Returns { pairs:[{pair,A,B,rewarded}], roles:{filename:role}, example }.
+  // --- ring slices: a uniformly random wedge for every object ------------------------
+  // Where each image sits is fully random per participant — we do NOT reserve wedges for
+  // A vs B or otherwise structure placement. The ONLY constraint (as in the in-lab task)
+  // is that a pair's own A and B never land on adjacent wedges (|Δslice| == 1 mod N), so the
+  // pairing can't be read off spatial proximity. Implemented by shuffling all N wedges and
+  // dealing one to each object (A1,B1,A2,B2,…), rejection-sampled until that rule holds.
+  function assignSlices(pairs, rng) {
+    const n = C.WHEEL.N_SLICES;
+    const all = [];
+    for (let i = 0; i < n; i++) all.push(i);
+    function adjacent(a, b) { return Math.min((a - b + n) % n, (b - a + n) % n) === 1; }
+    while (true) {
+      const perm = R.shuffle(all, rng);              // a random distinct wedge for each object
+      const ok = pairs.every(function (pr, i) { return !adjacent(perm[2 * i], perm[2 * i + 1]); });
+      if (ok) {
+        pairs.forEach(function (pr, i) { pr.A_slice = perm[2 * i]; pr.B_slice = perm[2 * i + 1]; });
+        return;
+      }
+    }
+  }
+
+  // --- assignment: pairs, reward status, roles, ring slices ---------------------------
+  // Returns { pairs:[{pair,A,B,rewarded,A_slice,B_slice}], roles:{filename:role},
+  // slices:{filename:sliceIndex} }.
   function assignStimuli(task, pid) {
     const rng = R.makeRNG(pid, 'assign');
     const shuffled = R.shuffle(task, rng);           // randomize which items become A vs B
@@ -39,20 +61,28 @@ window.SP = window.SP || {};
     const rewardedIdx = R.sample([0, 1, 2, 3], 2, rng); // 2 of 4 pairs rewarded
     rewardedIdx.forEach(function (i) { pairs[i].rewarded = true; });
 
+    assignSlices(pairs, rng);                        // random wedge per object; pairmates never adjacent
+
     const roles = {};
+    const slices = {};
     pairs.forEach(function (pr) {
       roles[pr.A] = pr.rewarded ? 'A+' : 'A-';
       roles[pr.B] = pr.rewarded ? 'B+' : 'B-';
+      slices[pr.A] = pr.A_slice;
+      slices[pr.B] = pr.B_slice;
     });
-    return { pairs: pairs, roles: roles };
+    return { pairs: pairs, roles: roles, slices: slices };
   }
 
-  // --- random in-image dot offset (top-left px within the displayed image) ------------
+  // --- random in-image dot offset (top-left as a fraction of the image side) -----------
+  // Fractional (not px) so the dot rides along with the responsive wheel image at any
+  // window size. Kept within [margin, 1 - margin - dot] so the whole dot stays on-image.
   function dotXY(rng) {
-    const range = C.IMG_PX - 2 * C.DOT_MARGIN_PX - C.DOT_PX;
+    const m = C.WHEEL.DOT_MARGIN_FRAC;
+    const range = 1 - 2 * m - C.WHEEL.DOT_FRAC;
     return {
-      left: Math.round(C.DOT_MARGIN_PX + rng() * range),
-      top: Math.round(C.DOT_MARGIN_PX + rng() * range)
+      lf: m + rng() * range,
+      tf: m + rng() * range
     };
   }
 
@@ -86,6 +116,8 @@ window.SP = window.SP || {};
         b_filename: pr.B,
         role_a: design.roles[pr.A],
         role_b: design.roles[pr.B],
+        a_slice: design.slices[pr.A],
+        b_slice: design.slices[pr.B],
         has_dot_a: hasDotA,
         has_dot_b: hasDotB,
         dot_xy_a: hasDotA ? dotXY(rng) : null,
@@ -107,6 +139,7 @@ window.SP = window.SP || {};
         b_filename: pr.B,
         paired_a_filename: pr.A,
         role_b: design.roles[pr.B],
+        b_slice: design.slices[pr.B],
         reward: pr.rewarded ? 1 : 0
       };
     });
@@ -144,11 +177,15 @@ window.SP = window.SP || {};
       // +item-on-left pattern: 3 true, 2 false, shuffled per comparison.
       const plusLeftSeq = R.shuffle([true, true, true, false, false], rng);
       plusLeftSeq.forEach(function (plusLeft) {
+        const leftFn = plusLeft ? c.plus : c.minus;
+        const rightFn = plusLeft ? c.minus : c.plus;
         trials.push({
           comparison_type: c.type,
           plus_filename: c.plus,
-          left_filename: plusLeft ? c.plus : c.minus,
-          right_filename: plusLeft ? c.minus : c.plus,
+          left_filename: leftFn,
+          right_filename: rightFn,
+          left_slice: design.slices[leftFn],
+          right_slice: design.slices[rightFn],
           paired_b_left: plusLeft ? c.plus_pairedB : c.minus_pairedB,
           paired_b_right: plusLeft ? c.minus_pairedB : c.plus_pairedB
         });
@@ -168,7 +205,8 @@ window.SP = window.SP || {};
       example: sel.example,
       selectionRows: sel.selectionRows,
       pairs: assigned.pairs,
-      roles: assigned.roles
+      roles: assigned.roles,
+      slices: assigned.slices
     };
     design.associationTrials = buildAssociation(design, pid);
     design.rewardTrials = buildReward(design, pid);

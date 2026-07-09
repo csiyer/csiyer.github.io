@@ -11,6 +11,8 @@
   --border: #E6E4DF;
   --accent: #4F5B66;
   --img-px: 300px;
+  --wheel-line: #C6C2B9;   /* soft neutral gray for the ring/spokes on the light surround */
+  /* --wheel-half/-outer/-r-img/-img/-dot are injected from config.js (stimuli.js) */
 }
 
 html, body {
@@ -61,19 +63,6 @@ html, body {
   pointer-events: none;
 }
 
-/* Reward / no-reward outcome icon. */
-.outcome-wrap { display: flex; align-items: center; justify-content: center; min-height: var(--img-px); }
-.outcome-img { width: 180px; height: 180px; object-fit: contain; }
-
-/* Fixation cross. */
-.fixation {
-  font-size: 40px; color: var(--faint); font-weight: 400;
-  display: flex; align-items: center; justify-content: center; min-height: var(--img-px);
-}
-
-.too-slow { color: #cc3333; font-size: 28px; font-weight: 700; min-height: var(--img-px);
-  display: flex; align-items: center; justify-content: center; }
-
 /* Cloudflare Turnstile bot check. */
 .turnstile-page { text-align: center; padding: 40px 0; }
 .turnstile-widget, #turnstile-container { display: flex; justify-content: center; margin-bottom: 16px; }
@@ -106,30 +95,12 @@ html, body {
 .dec-prompt.locked { color: var(--faint); opacity: 0.7; }
 .dec-sub { color: var(--muted); font-size: 15px; margin-bottom: 28px; min-height: 1.2em; }
 
-/* jsPsych renders the choice buttons inside .jspsych-html-button-response-btngroup */
+/* jsPsych lays out button-trial buttons (welcome, fullscreen, comprehension, debrief) in a row */
 #jspsych-html-button-response-btngroup,
 .jspsych-html-button-response-btngroup {
   display: flex; justify-content: center; gap: 64px; flex-wrap: nowrap;
 }
-.choice-btn {
-  background: var(--card) !important;
-  border: 2px solid var(--border) !important;
-  border-radius: 12px !important;
-  padding: 14px !important;
-  margin: 0 !important;
-  transition: border-color 0.12s ease, transform 0.08s ease, box-shadow 0.12s ease;
-}
-.choice-btn:not(:disabled):hover {
-  border-color: var(--accent) !important;
-  transform: translateY(-2px);
-  box-shadow: 0 6px 18px rgba(0,0,0,0.08);
-}
-.choice-btn:disabled { opacity: 0.92 !important; cursor: default; }
-.choice-img { width: 240px; height: 240px; object-fit: contain; display: block; border-radius: 6px; }
-
-/* non-interactive preview row (matches the clickable choice layout) */
-.dec-row { display: flex; justify-content: center; gap: 64px; }
-.dec-frame { border: 2px solid transparent; border-radius: 12px; padding: 14px; }
+/* .dec-prompt / .dec-sub are reused inside .wheel-prompt (the decision prompt at the wheel center) */
 
 /* ---- rating slider ---- */
 .rate-img { width: var(--img-px); height: var(--img-px); object-fit: contain; display: block; margin: 0 auto 22px; border-radius: 6px; }
@@ -167,6 +138,113 @@ html, body {
 }
 /* slider anchor labels rendered by jsPsych */
 .jspsych-slider-label { color: var(--muted); font-size: 14px; }
+
+/* ---- 8-slice wheel / ring ---- */
+/* The wheel fills the viewport (position:fixed) so it escapes the centered content card
+   and scales to the window via the --wheel-* vars. Each trial re-emits the ring, so the
+   card's fade-in is disabled here to keep the ring visually stable across trials. */
+.jspsych-content:has(.wheel) { animation: none; padding: 0; max-width: none; }
+
+.wheel {
+  position: fixed;
+  inset: 0;
+  z-index: 1;
+}
+
+/* ring background: centered square sized to the outer diameter (2 x outer radius) */
+.wheel-ring {
+  position: absolute;
+  left: 50%; top: 50%;
+  width: calc(var(--wheel-outer) * 2);
+  height: calc(var(--wheel-outer) * 2);
+  transform: translate(-50%, -50%);
+  overflow: visible;
+}
+.wheel-lines line, .wheel-lines circle {
+  stroke: var(--wheel-line);
+  stroke-width: 0.5;         /* viewBox units; ~2px at a typical window, scales with size */
+  fill: none;
+}
+.wheel-lines .wheel-hub { fill: var(--bg); }   /* bg-filled hub covers the spokes' convergence */
+
+/* a stimulus sitting in its wedge; centered on its ring position */
+.wheel-item {
+  position: absolute;
+  width: var(--wheel-img);
+  height: var(--wheel-img);
+  transform: translate(-50%, -50%);
+}
+.wheel-img {
+  width: 100%; height: 100%;
+  object-fit: contain;
+  display: block;
+  border-radius: 6px;
+}
+/* cover dot sized relative to the (responsive) image; inherits color/shape from .cover-dot */
+.wheel-dot { width: var(--wheel-dot); height: var(--wheel-dot); }
+
+/* central hub content: outcome icon, decision prompt, or missed-response flash */
+.wheel-center {
+  position: absolute;
+  left: 50%; top: 50%;
+  transform: translate(-50%, -50%);
+  text-align: center;
+}
+.wheel-outcome-img {
+  width: var(--wheel-img); height: var(--wheel-img);
+  object-fit: contain; display: block;
+}
+.wheel-too-slow {
+  color: #cc3333;
+  font-weight: 700;
+  font-size: calc(var(--wheel-img) * 0.24);
+  white-space: nowrap;
+}
+.wheel-prompt { max-width: calc(var(--wheel-outer) * 0.95); }
+
+/* decision options: clickable images at their ring positions. jsPsych renders them as
+   buttons in the btngroup, which we force to fill the viewport so each button can be
+   absolutely positioned at its wedge (mirrors the .wheel-item geometry). */
+.wheel-decision #jspsych-html-button-response-btngroup,
+.wheel-decision .jspsych-html-button-response-btngroup {
+  position: fixed;
+  inset: 0;
+  margin: 0;
+  padding: 0;
+  display: block;
+  gap: 0;
+  z-index: 2;
+  pointer-events: none;      /* only the option images themselves are clickable */
+}
+/* the plugin wraps each button_html in a div (which holds the click listener); make it
+   layout-transparent so the absolutely-positioned inner <button> lands at its wedge, while
+   clicks still bubble from the button up to the wrapper's handler. */
+.wheel-decision .jspsych-html-button-response-button { display: contents; }
+.wheel-choice-btn {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  width: var(--wheel-img);
+  height: var(--wheel-img);
+  padding: 0;
+  margin: 0;
+  background: transparent;
+  border: 2px solid transparent;
+  border-radius: 12px;
+  pointer-events: auto;
+  cursor: pointer;
+  transition: border-color 0.12s ease, transform 0.08s ease, box-shadow 0.12s ease;
+}
+.wheel-choice-btn:hover {
+  border-color: var(--accent);
+  transform: translate(-50%, -50%) translateY(-3px);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.10);
+}
+.wheel-choice-img {
+  width: 100%; height: 100%;
+  object-fit: contain;
+  display: block;
+  border-radius: 6px;
+}
 
 /* ---- progress bar (subtle) ---- */
 #jspsych-progressbar-container {

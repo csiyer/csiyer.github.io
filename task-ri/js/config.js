@@ -32,7 +32,7 @@ SP.config = {
 
   // ---- shared ------------------------------------------------------------
   LEAD_IN_MS: 600,        // "get ready" fixation before each phase's first trial
-  TOO_SLOW_MS: 600,       // "Too Slow!" flash shown after any missed response
+  TOO_SLOW_MS: 600,       // "Too slow!" flash shown after any missed response
 
   // ---- ratings -----------------------------------------------------------
   SLIDER_MIN: -1,
@@ -45,10 +45,25 @@ SP.config = {
   REQUIRE_MOVEMENT: true,
   SLIDER_LABELS: ['strongly dislike', '', 'strongly like'],
 
-  // ---- cover dot (display-space px, image shown at IMG_PX) ----------------
-  IMG_PX: 300,
-  DOT_PX: 18,
-  DOT_MARGIN_PX: 24,       // lab cover_dot_margin_px 10 (on 512px), scaled to 300px display
+  // ---- wheel / ring layout (ports ../associative-looking geometry) --------
+  // The 8 task+... stimuli each own a fixed wedge on an 8-slice ring, so a pair's
+  // A and B always appear at the same two on-screen locations — the spatial cue
+  // that lets participants learn pairings without relying on temporal contiguity
+  // alone. All lengths are fractions of the ring's outer radius, which itself is
+  // sized to the viewport (see the --wheel-* CSS vars injected in stimuli.js), so
+  // the wheel scales to any window like the lab's compute_scaled_geometry.
+  WHEEL: {
+    N_SLICES: 8,
+    SLICE_ZERO_ANGLE_DEG: 112.5, // slice 0 center; rotated +22.5° so wedge boundaries land on the axes/diagonals
+    EDGE_MARGIN_FRAC: 0.06,      // gap from ring outer edge to nearest viewport edge (of min(w,h)/2)
+    IMAGE_CENTER_FRAC: 0.70,     // stimulus-center radius, as frac of outer radius
+    IMAGE_SIZE_FRAC: 0.30,       // stimulus side length, as frac of outer radius
+    HUB_RADIUS_FRAC: 0.045,      // central hub circle radius, as frac of outer radius
+    // cover dot, as fractions of the (responsive) image side — keeps the lab's
+    // dot-to-image proportion (18px on a 152px image ≈ 0.12) at every window size.
+    DOT_FRAC: 0.12,              // dot diameter
+    DOT_MARGIN_FRAC: 0.07        // keep the dot this far (of image side) from every image edge
+  },
 
   // ---- response keys ------------------------------------------------------
   KEY_YES: 'ArrowUp',      // saw a dot

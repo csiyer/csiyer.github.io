@@ -12,15 +12,6 @@ window.SP = window.SP || {};
   }
 
   // ---- shared segment nodes ----------------------------------------------------------
-  function fixationNode(ms, tag) {
-    return {
-      type: jsPsychHtmlKeyboardResponse,
-      stimulus: S.fixation(),
-      choices: 'NO_KEYS',
-      trial_duration: SP.scaleMs(ms),
-      data: { phase: tag || 'isi' }
-    };
-  }
   function passiveNode(html, ms, tag) {
     return {
       type: jsPsychHtmlKeyboardResponse,
@@ -30,20 +21,25 @@ window.SP = window.SP || {};
       data: { phase: tag }
     };
   }
+  // Blank ISI/ITI frame: the bare wheel (ring + hub, no images). The hub is the fixation
+  // point, so the ring stays put between stimuli — matching the lab's always-on overlay.
+  function wheelBlankNode(ms, tag) {
+    return passiveNode(S.wheel({}), ms, tag || 'isi');
+  }
   function leadIn() {
     return {
       timeline: [
-        passiveNode('<div class="instr"><p class="lead">Get ready…</p></div>', 800, 'leadin'),
-        fixationNode(C.LEAD_IN_MS, 'leadin')
+        passiveNode(S.wheel({ center: '<p class="lead">Get ready…</p>' }), 800, 'leadin'),
+        wheelBlankNode(C.LEAD_IN_MS, 'leadin')
       ]
     };
   }
 
-  // Flashes "Too Slow!" after a response-required trial only if that trial's `missed` flag
-  // (set in its own on_finish) was true. Skipped entirely otherwise (conditional_function).
+  // Flashes "Too slow!" at the wheel center after a response-required trial only if that trial's
+  // `missed` flag (set in its own on_finish) was true. Skipped otherwise (conditional_function).
   function tooSlowNode() {
     return {
-      timeline: [passiveNode(S.tooSlow(), C.TOO_SLOW_MS, 'too_slow')],
+      timeline: [passiveNode(S.wheelTooSlow(), C.TOO_SLOW_MS, 'too_slow')],
       conditional_function: function () {
         const last = SP.jsPsych.data.get().last(1).values()[0];
         return !!(last && last.missed);
@@ -130,8 +126,8 @@ window.SP = window.SP || {};
 
   // ---- association trial (A cover -> ISI -> B cover [canonical] -> ITI) ---------------
   function assocTrialNodes(t) {
-    const aHtml = S.card(t.a_filename, t.dot_xy_a);
-    const bHtml = S.card(t.b_filename, t.dot_xy_b);
+    const aHtml = S.wheel({ items: [{ filename: t.a_filename, slice: t.a_slice, dot: t.dot_xy_a }] });
+    const bHtml = S.wheel({ items: [{ filename: t.b_filename, slice: t.b_slice, dot: t.dot_xy_b }] });
     const expectA = t.has_dot_a ? C.KEY_YES : C.KEY_NO;
     const expectB = t.has_dot_b ? C.KEY_YES : C.KEY_NO;
     // Captured directly from the A-window trial's on_finish (avoids fragile data-index lookups
@@ -157,7 +153,7 @@ window.SP = window.SP || {};
         }
       },
       tooSlowNode(),
-      fixationNode(C.ASSOC_ISI_MS, 'isi'),
+      wheelBlankNode(C.ASSOC_ISI_MS, 'isi'),
       {
         type: jsPsychHtmlKeyboardResponse,
         stimulus: bHtml,
@@ -168,6 +164,7 @@ window.SP = window.SP || {};
           phase: 'associative',
           stimulus_filename1: t.a_filename, stimulus_filename2: t.b_filename,
           role1: t.role_a, role2: t.role_b, pair: t.pair,
+          stimulus_location1: t.a_slice, stimulus_location2: t.b_slice,
           has_dot_a: t.has_dot_a, has_dot_b: t.has_dot_b
         },
         on_finish: function (d) {
@@ -179,18 +176,18 @@ window.SP = window.SP || {};
         }
       },
       tooSlowNode(),
-      fixationNode(C.ASSOC_ITI_MS, 'iti')
+      wheelBlankNode(C.ASSOC_ITI_MS, 'iti')
     ];
   }
 
   // ---- reward trial (passive B -> ISI -> outcome [canonical] -> ITI) ------------------
   function rewardTrialNodes(t) {
-    const bHtml = S.card(t.b_filename, null);
-    const outHtml = S.outcome(t.reward === 1);
+    const bHtml = S.wheel({ items: [{ filename: t.b_filename, slice: t.b_slice }] });
+    const outHtml = S.wheel({ center: S.wheelOutcomeCenter(t.reward === 1) });
     const expect = t.reward === 1 ? C.KEY_REWARD : C.KEY_NOREWARD;
     return [
       passiveNode(bHtml, C.REWARD_B_MS, 'reward_b'),
-      fixationNode(C.REWARD_ISI_MS, 'isi'),
+      wheelBlankNode(C.REWARD_ISI_MS, 'isi'),
       {
         type: jsPsychHtmlKeyboardResponse,
         stimulus: outHtml,
@@ -199,7 +196,7 @@ window.SP = window.SP || {};
         response_ends_trial: false,
         data: {
           phase: 'reward', stimulus_filename1: t.b_filename,
-          role1: t.role_b, pair: t.pair, outcome: t.reward
+          role1: t.role_b, pair: t.pair, stimulus_location1: t.b_slice, outcome: t.reward
         },
         on_finish: function (d) {
           d.missed = d.response == null;
@@ -207,50 +204,61 @@ window.SP = window.SP || {};
         }
       },
       tooSlowNode(),
-      fixationNode(C.REWARD_ITI_MS, 'iti')
+      wheelBlankNode(C.REWARD_ITI_MS, 'iti')
     ];
   }
 
-  // ---- decision trial (non-interactive preview -> clickable 2AFC -> ITI) -------------
-  // Two trials: a preview where the options are shown but NOT clickable (faithful to the lab's
-  // "options removed, deliberate" window), then a choice trial where the same options become
-  // clickable. This avoids relying on a disabled <button> (in jsPsych v8 the click listener is
-  // on the wrapper, so a disabled inner button would not block real clicks).
-  function decisionPairRow(leftFn, rightFn, asButtons) {
-    if (asButtons) return null; // buttons are built by the plugin via button_html
-    return '<div class="dec-row">' +
-      '<div class="dec-frame"><img class="choice-img" src="' + S.path(leftFn) + '"></div>' +
-      '<div class="dec-frame"><img class="choice-img" src="' + S.path(rightFn) + '"></div>' +
-      '</div>';
+  // ---- decision trial (preview on the wheel -> clickable 2AFC at ring positions -> ITI) ----
+  // Faithful to the lab: both options sit at their own fixed wedges (no gaze measure online, but
+  // this preserves the learned spatial map). First a preview where the options are shown but NOT
+  // clickable (the deliberate-look window), then a choice trial where the same two options become
+  // clickable at the SAME ring positions. In the choice trial the two options are the plugin's
+  // buttons; each is absolutely positioned at its wedge via slicePosStyle, and .wheel-decision
+  // makes the button-group fill the viewport (its wrappers use display:contents so only the
+  // positioned <button>s lay out). The plugin's click listener sits on the wrapper, so a click on
+  // the inner button still bubbles up and records the choice.
+  const DEC_PROMPT = 'Which is more likely to lead to a reward?';
+  function decisionPromptCenter(sub, locked) {
+    return '<div class="wheel-prompt">' +
+      '<div class="dec-prompt' + (locked ? ' locked' : '') + '">' + DEC_PROMPT + '</div>' +
+      '<div class="dec-sub">' + sub + '</div></div>';
   }
   function decisionTrialNodes(t) {
     const leftFn = t.left_filename, rightFn = t.right_filename, plusFn = t.plus_filename;
     return [
       {
         type: jsPsychHtmlKeyboardResponse,
-        stimulus: '<div class="dec-prompt locked">Which is more likely to lead to a reward?</div>' +
-          '<div class="dec-sub">Take a moment to look at both…</div>' +
-          decisionPairRow(leftFn, rightFn, false),
+        stimulus: S.wheel({
+          items: [
+            { filename: leftFn, slice: t.left_slice },
+            { filename: rightFn, slice: t.right_slice }
+          ],
+          center: decisionPromptCenter('Take a moment to look at both…', true)
+        }),
         choices: 'NO_KEYS',
         trial_duration: SP.scaleMs(C.DECISION_PREVIEW_MS),
         data: { phase: 'decision_preview' }
       },
       {
         type: jsPsychHtmlButtonResponse,
-        stimulus: '<div class="dec-prompt">Which is more likely to lead to a reward?</div>' +
-          '<div class="dec-sub">Click the image you choose.</div>',
+        stimulus: S.wheel({ center: decisionPromptCenter('Click the image you choose.', false) }),
         choices: [leftFn, rightFn],
         button_html: function (choice) {
-          return '<button class="jspsych-btn choice-btn"><img class="choice-img" src="' + S.path(choice) + '"></button>';
+          const slice = (choice === leftFn) ? t.left_slice : t.right_slice;
+          return '<button class="wheel-choice-btn" style="' + S.slicePosStyle(slice) + '">' +
+            '<img class="wheel-choice-img" src="' + S.path(choice) + '"></button>';
         },
         trial_duration: SP.scaleMs(C.DECISION_TIMEOUT_MS),
         response_ends_trial: true,
         data: {
           phase: 'decision', decision_type: t.comparison_type,
           stimulus_filename1: leftFn, stimulus_filename2: rightFn,
+          stimulus_location1: t.left_slice, stimulus_location2: t.right_slice,
           paired_b_left: t.paired_b_left, paired_b_right: t.paired_b_right
         },
+        on_load: function () { document.body.classList.add('wheel-decision'); },
         on_finish: function (d) {
+          document.body.classList.remove('wheel-decision');
           d.missed = d.response == null;
           if (d.response == null) {
             d.decision_rt = 'NA'; d.stimulus_id_chosen = 'NA'; d.response = 'NA'; d.correct = 'NA';
@@ -264,7 +272,7 @@ window.SP = window.SP || {};
         }
       },
       tooSlowNode(),
-      fixationNode(C.DECISION_ITI_MS, 'iti')
+      wheelBlankNode(C.DECISION_ITI_MS, 'iti')
     ];
   }
 

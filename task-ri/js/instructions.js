@@ -38,26 +38,30 @@ window.SP = window.SP || {};
   }
 
   // ---- association (implicit gray-dot cover task) ------------------------------------
+  // Mirrors instructions_implicit.md Part 1 (framing → example+keys → recap), adapted for
+  // online: "Too slow!" text replaces the lab's red circle, no eyes-open/gaze line (no
+  // eyetracking online), and jsPsych Next-button nav replaces "Press → to begin".
   function associationPages(design) {
     const exampleFile = design && design.example && design.example[0] ? design.example[0] : S.pool[0];
     return [
       wrap(
         '<h2>Part 2</h2>' +
-        '<p>You’ll now see a sequence of images appear, one at a time.</p>' +
-        '<p>To ensure you’re paying attention to the sequence, you’ll have a small task: decide whether each image has a <strong>small gray dot</strong> ' +
-        'overlaid somewhere on it. The dot doesn’t mean anything — it just helps us check that ' +
-        'you’re alert and watching each image.</p>' +
-        '<p>Press ' + UP + ' when you <strong>see a gray dot</strong>.<br>' +
-        'Press ' + DOWN + ' when there is <strong>no dot</strong>.</p>' +
-        '<p>Respond as quickly and accurately as you can.</p>' +
-        '<p>Your bonus will partially depend on your accuracy.</p>'
+        '<p>This part will begin with a sequence of images appearing on the screen, one at a time.</p>' +
+        '<p>Just watch the sequence of images.</p>'
       ),
       wrap(
-        '<h2>Here’s what a gray dot looks like</h2>' +
+        '<p>Sometimes, an image will have a <strong>small gray dot</strong> overlaid on it.</p>' +
         '<div style="text-align:center;margin:18px 0;">' +
         S.card(exampleFile, { left: 180, top: 70 }) +
         '</div>' +
-        '<p style="text-align:center;">This picture has a dot, so you would press ' + UP + '.</p>'
+        '<p style="text-align:center;">Press ' + UP + ' if the picture has a gray dot.<br>' +
+        'Press ' + DOWN + ' if it has no gray dot.</p>' +
+        '<p style="text-align:center;">This picture has a dot, so you would press ' + UP + '.</p>' +
+        '<p>The gray dot task is just to make sure you’re paying attention to the images.</p>' +
+      ),
+      wrap(
+        '<p>You’ll have about a second to respond. Respond as quickly and accurately as possible.</p>' +
+        '<p>Your bonus will partially depend on your accuracy.</p>'
       ),
       wrap(
         '<h2>Ready?</h2>' +
@@ -68,48 +72,58 @@ window.SP = window.SP || {};
   }
 
   // ---- reward ------------------------------------------------------------------------
+  // Mirrors instructions_implicit.md Part 2 (outcomes → task + "remember for later" → speed →
+  // recap), adapted for online: "Too slow!" text and no eyes-open/gaze line.
   function rewardPages() {
+    const outcomeIcons =
+      '<div style="display:flex;justify-content:center;gap:60px;margin:18px 0;align-items:center;">' +
+      '<div style="text-align:center;"><img src="' + S.path(C.REWARD_IMG) + '" style="width:90px;height:90px;object-fit:contain;"><br><strong>quarter</strong> = reward</div>' +
+      '<div style="text-align:center;"><img src="' + S.path(C.NOREWARD_IMG) + '" style="width:90px;height:90px;object-fit:contain;"><br><strong>black circle</strong> = nothing</div>' +
+      '</div>';
     return [
       wrap(
         '<h2>Part 3</h2>' +
-        '<p>Now you’ll see some of those images again. In this phase, you’ll learn which ones are worth a <strong>reward</strong>.' +
-        '<div style="display:flex;justify-content:center;gap:60px;margin:18px 0;align-items:center;">' +
-        '<div style="text-align:center;"><img src="' + S.path(C.REWARD_IMG) + '" style="width:90px;height:90px;object-fit:contain;"><br><strong>quarter</strong> = reward</div>' +
-        '<div style="text-align:center;"><img src="' + S.path(C.NOREWARD_IMG) + '" style="width:90px;height:90px;object-fit:contain;"><br><strong>black circle</strong> = nothing</div>' +
-        '</div>'
+        '<p>Now you’ll see some of the pictures again, one at a time. Some pictures will be <strong>rewarded</strong>, and others won’t.</p>' +
+        outcomeIcons +
+        '<p>A <strong>quarter</strong> means that picture is worth a <strong>reward</strong>!' +
+        'A <strong>black circle</strong> means that picture is worth <strong>nothing</strong>.</p>'
       ),
       wrap(
-        '<h2>Your task</h2>' +
-        '<p>When the outcome appears:</p>' +
+        '<p>When the outcome appears (not the images):</p>' +
         '<p>Press ' + UP + ' when the outcome is a <strong>reward</strong> (quarter).<br>' +
         'Press ' + DOWN + ' when it is <strong>nothing</strong> (black circle).</p>' +
-        '<p>You don’t need to press anything for the picture, just the outcome.</p>' +
-        '<p>Respond as quickly and accurately as you can.</p>' +
+        '<p>Remember these reward associations for later.</p>'
+      ),
+      wrap(
+        '<p>You’ll have about a second to respond. Respond as quickly and accurately as possible.</p>' +
         '<p>Your bonus will partially depend on your accuracy.</p>'
       ),
       wrap(
         '<h2>Ready?</h2>' +
-        '<p><strong>Recap:</strong> press ' + UP + ' for a reward (quarter), ' + DOWN + ' for nothing ' +
-        '(black circle). Click <em>Next</em> for a quick check, then begin.</p>'
+        '<p><strong>Recap:</strong> press ' + UP + ' when you get a reward (quarter), ' + DOWN + ' when you ' +
+        'don’t (black circle). Click <em>Next</em> for a quick check, then begin.</p>'
       )
     ];
   }
 
   // ---- decision ----------------------------------------------------------------------
+  // Mirrors instructions_implicit.md Part 3 intro. The lab's appear/disappear "flashing"
+  // walkthrough is dropped (online has no gaze window): here the two images stay on screen,
+  // locked during a brief preview, then become clickable.
   function decisionPages() {
     return [
       wrap(
         '<h2>Part 4</h2>' +
-        '<p>Now, you’ll make choices between images you’ve seen earlier.</p>' +
-        '<p>On each trial, choose the image that is <strong>most likely to lead to a reward</strong>, ' +
-        'based on everything you’ve seen so far. If you’re not sure, make your best guess.</p>'
+        '<p>Now, you’ll put together everything you’ve learned in the experiment so far.</p>' + 
+        '<p>You’ll see two images you saw in the previous phase, and pick between them.</p>' +
+        '<p>Choose the image <strong>most likely to lead to a reward</strong>, based on everything ' +
+        'you’ve seen so far. If you’re not sure, make your best guess.</p>'
       ),
       wrap(
-        '<h2>How it works</h2>' +
         '<p>When the two images first appear, take a moment to consider them — you won’t be able to ' +
-        'click right away. After a brief pause the images become active and you can <strong>click the one ' +
+        'click right away. Then, the images become active and you can <strong>click the one ' +
         'you choose</strong>.</p>' +
-        '<p>Take your time; there’s no rush once the images are active.</p>' +
+        '<p>You’ll have 10 seconds to make your choice.</p>' +
         '<p>Once again, your bonus will be determined by your performance on these choices.</p>'
       )
     ];
@@ -147,12 +161,12 @@ window.SP = window.SP || {};
     association: [
       {
         prompt: 'When a picture has a small gray dot on it, which key do you press?',
-        options: ['Down arrow', 'Up arrow', 'The spacebar'],
+        options: ['Down arrow', 'Up arrow', 'Spacebar'],
         correct: 1
       },
       {
-        prompt: 'What are you watching for during this part?',
-        options: ['Whether each picture has a gray dot', 'Which pictures are worth money', 'How fast the pictures change'],
+        prompt: 'When a picture has no dot on it, which key do you press?',
+        options: ['Down arrow', 'Up arrow', 'Spacebar'],
         correct: 0
       }
     ],
@@ -171,7 +185,7 @@ window.SP = window.SP || {};
     decision: [
       {
         prompt: 'On each choice, you should pick the image that is…',
-        options: ['The one you personally like more', 'The one shown on the left', 'Most likely to lead to a reward'],
+        options: ['The one you personally like more', 'The one on the left', 'Most likely to lead to a reward'],
         correct: 2
       }
     ]
