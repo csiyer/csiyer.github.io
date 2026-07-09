@@ -17,7 +17,7 @@ window.SP = window.SP || {};
     return wrap(
       '<h1>Welcome</h1>' +
       '<p>Thank you for taking part in our study! The data in this study is for scientific research, so we really value your full attention.<\p>' +
-      '<p>This study will take roughly <strong>15 minutes</strong>, and you\'ll earn <strong>$3</strong> with up to <strong>$2</strong> in bonus!</p>' +
+      '<p>This study will take roughly <strong>15 minutes</strong>, and you\'ll earn <strong>$3</strong> with up to <strong>$1</strong> in bonus!</p>' +
       '<p>Please review the consent form below (you may also download a copy for your records).</p>' +
       '<iframe src="' + C.CONSENT_PDF_URL + '" width="100%" height="420" ' +
       'style="border:1px solid var(--border);border-radius:8px;margin:10px 0;"></iframe>' +

@@ -31,11 +31,15 @@ window.SP = window.SP || {};
     return C.PROLIFIC_COMPLETION_URL + '?cc=' + encodeURIComponent(C.PROLIFIC_COMPLETION_CODE);
   }
 
-  // Bonus = average of three part-level accuracies (equal weight per part, not per trial):
-  // part 2 gray-dot detection (both the A- and B-window judgment per association trial),
-  // part 3 reward-outcome detection, and part 4 DIRECT (B+ vs B-) decision trials only —
-  // indirect (A+ vs A-) trials never contribute, since that's the repulsion measure itself.
-  // A missed response counts as incorrect (0), so there's no incentive to not respond.
+  // Bonus = weighted average of three part-level accuracies (weight per part, not per trial):
+  // part 2 gray-dot detection (both the A- and B-window judgment per association trial, 25%),
+  // part 3 reward-outcome detection (25%), and part 4 DIRECT (B+ vs B-) decision trials only
+  // (50%) — indirect (A+ vs A-) trials never contribute, since that's the repulsion measure
+  // itself. The direct test is weighted heaviest since it's the actual manipulation check
+  // (did reward learning happen); the two cover tasks just confirm attention during encoding.
+  // A missed response counts as incorrect (0), so there's no incentive to not respond. The
+  // weights aren't shown to participants — only each accuracy and the resulting bonus.
+  const BONUS_WEIGHTS = { part2: 0.25, part3: 0.25, part4: 0.5 };
   function computeBonusSummary() {
     function acc(vals) {
       if (!vals.length) return 0;
@@ -54,7 +58,7 @@ window.SP = window.SP || {};
       .map(function (r) { return r.correct === 1 ? 1 : 0; });
 
     const part2Acc = acc(part2Vals), part3Acc = acc(part3Vals), part4Acc = acc(part4Vals);
-    const overallAcc = (part2Acc + part3Acc + part4Acc) / 3;
+    const overallAcc = BONUS_WEIGHTS.part2 * part2Acc + BONUS_WEIGHTS.part3 * part3Acc + BONUS_WEIGHTS.part4 * part4Acc;
     const bonus = Math.max(0, Math.min(C.MAX_BONUS, overallAcc * C.MAX_BONUS));
     return { part2Acc: part2Acc, part3Acc: part3Acc, part4Acc: part4Acc, overallAcc: overallAcc, bonus: bonus };
   }

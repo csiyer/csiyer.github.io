@@ -83,7 +83,7 @@ SP.config = {
   CONSENT_PDF_URL: 'https://csiyer.github.io/files/online_consent_form.pdf',
 
   // ---- bonus (must match the dollar figure quoted in instructions.js welcomeHtml) ---------
-  MAX_BONUS: 2,
+  MAX_BONUS: 1,
 
   // ---- Cloudflare Turnstile (bot check) ------------------------------------
   TURNSTILE_SITE_KEY: '0x4AAAAAADuq2AVsFg4ANjrs',
