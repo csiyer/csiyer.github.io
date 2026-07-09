@@ -30,7 +30,7 @@ window.SP = window.SP || {};
   function preRatingPages() {
     return [wrap(
       '<h2>Part 1</h2>' +
-      '<p>First, please rate how much you like a series of images.</p>' +
+      '<p>First, you will see a sequence of images.</p>' +
       '<p>For each image, drag the slider to show <strong>how much you like it</strong>, anywhere from ' +
       '<em>strongly dislike</em> on the left to <em>strongly like</em> on the right.</p>' +
       '<p>There are no right answers, just whatever you like.</p>'
@@ -57,7 +57,7 @@ window.SP = window.SP || {};
         '<p style="text-align:center;">Press ' + UP + ' if the picture has a gray dot.<br>' +
         'Press ' + DOWN + ' if it has no gray dot.</p>' +
         '<p style="text-align:center;">This picture has a dot, so you would press ' + UP + '.</p>' +
-        '<p>The gray dot task is just to make sure you’re paying attention to the images.</p>' +
+        '<p>The gray dot task is just to make sure you’re paying attention to the images.</p>'
       ),
       wrap(
         '<p>You’ll have about a second to respond. Respond as quickly and accurately as possible.</p>' +
