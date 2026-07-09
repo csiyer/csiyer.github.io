@@ -26,9 +26,9 @@ SP.config = {
   REWARD_ITI_MS: 2000,
 
   // ---- decision timings (ms) ---------------------------------------------
-  DECISION_PREVIEW_MS: 1000,   // response lockout: options visible but not clickable
-  DECISION_TIMEOUT_MS: 10000,  // self-paced; generous cap after unlock (lab cap was 2000)
-  DECISION_ITI_MS: 750,        // trimmed from lab 2000
+  DECISION_PREVIEW_MS: 2000,   // response lockout: options visible but not clickable
+  DECISION_TIMEOUT_MS: 4000,  // self-paced; generous cap after unlock (lab cap was 2000)
+  DECISION_ITI_MS: 1000,        // trimmed from lab 2000
 
   // ---- shared ------------------------------------------------------------
   LEAD_IN_MS: 600,        // "get ready" fixation before each phase's first trial
@@ -97,7 +97,8 @@ SP.config = {
     skipTurnstile: false,
     fakePID: null,          // override PROLIFIC_PID when testing without URL params
     comprehensionLoopCap: 3, // max re-shows of instructions+question before moving on
-    quickN: null             // ?quick=N: truncate each of assoc/reward/decision to N trials
+    quickN: null,            // ?quick=N: truncate each of assoc/reward/decision to N trials
+    skipToDecision: false    // ?skipto=decision: skip pre-rating/association/reward entirely
   }
 };
 
@@ -117,5 +118,15 @@ SP.scaleMs = function (ms) {
   if (n > 0) {
     SP.config.DEV.quickN = n;
     SP.config.N_POOL = Math.min(SP.config.N_POOL, Math.max(n, SP.config.N_TASK + SP.config.N_EXAMPLE));
+  }
+})();
+
+// ?skipto=decision — jump straight to the decision phase (skip pre-rating/association/reward
+// entirely) with normal trial counts and normal timing, for testing decision-phase changes
+// without a full run-through. Ratings are faked (buildDesign only needs *some* rating per
+// candidate to pick "neutral" stimuli; the real experiment gets these from the pre-rating phase).
+(function () {
+  if (new URLSearchParams(window.location.search).get('skipto') === 'decision') {
+    SP.config.DEV.skipToDecision = true;
   }
 })();

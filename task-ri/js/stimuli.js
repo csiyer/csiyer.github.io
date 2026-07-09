@@ -81,17 +81,20 @@ window.SP = window.SP || {};
       '</g></svg>';
   }
 
-  // One image sitting in its wedge, optionally with a cover dot (dot = {lf,tf} image-fractions).
-  function wheelItem(filename, slice, dot) {
+  // One image sitting in its wedge, optionally with a cover dot (dot = {lf,tf} image-fractions)
+  // and/or an outline cue (outline = 'deliberate' | 'pick' — the decision phase's red-then-green
+  // lockout/unlock indicator; see .wheel-item-outline-* in style.css).
+  function wheelItem(filename, slice, dot, outline) {
     const dotHtml = dot
       ? '<div class="cover-dot wheel-dot" style="left:' + (dot.lf * 100).toFixed(2) + '%;top:' + (dot.tf * 100).toFixed(2) + '%;"></div>'
       : '';
-    return '<div class="wheel-item" style="' + slicePosStyle(slice) + '">' +
+    const outlineClass = outline ? ' wheel-item-outline-' + outline : '';
+    return '<div class="wheel-item' + outlineClass + '" style="' + slicePosStyle(slice) + '">' +
       '<img class="wheel-img" src="' + path(filename) + '" alt="">' + dotHtml +
       '</div>';
   }
 
-  // Full wheel scene. opts: { items:[{filename,slice,dot}], center:htmlString }.
+  // Full wheel scene. opts: { items:[{filename,slice,dot,outline}], center:htmlString }.
   // With items=[] and no center it's the bare ring — the persistent background used for the
   // ISI/ITI/lead-in "blank" frames (the hub replaces the old fixation cross, as in the lab).
   // (Decision options are clickable, but those are rendered as jsPsych buttons, not wheelItems.)
@@ -100,7 +103,7 @@ window.SP = window.SP || {};
     const items = opts.items || [];
     let html = '<div class="wheel">' + ringSVG();
     for (let i = 0; i < items.length; i++) {
-      html += wheelItem(items[i].filename, items[i].slice, items[i].dot);
+      html += wheelItem(items[i].filename, items[i].slice, items[i].dot, items[i].outline);
     }
     if (opts.center) html += '<div class="wheel-center">' + opts.center + '</div>';
     return html + '</div>';

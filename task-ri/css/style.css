@@ -12,6 +12,8 @@
   --accent: #4F5B66;
   --img-px: 300px;
   --wheel-line: #C6C2B9;   /* soft neutral gray for the ring/spokes on the light surround */
+  --wheel-deliberate: #cc3333;  /* red: locked preview, decision options not yet clickable */
+  --wheel-pick: #2f9e44;        /* green: choice is live, options are clickable */
   /* --wheel-half/-outer/-r-img/-img/-dot are injected from config.js (stimuli.js) */
 }
 
@@ -87,20 +89,11 @@ html, body {
 .jspsych-btn:hover { background: var(--btn-hover); }
 .jspsych-btn:disabled { opacity: 0.45; cursor: not-allowed; }
 
-/* ---- decision 2AFC ---- */
-.dec-prompt {
-  font-size: 22px; font-weight: 600; margin-bottom: 8px;
-  transition: color 0.15s ease, opacity 0.15s ease;
-}
-.dec-prompt.locked { color: var(--faint); opacity: 0.7; }
-.dec-sub { color: var(--muted); font-size: 15px; margin-bottom: 28px; min-height: 1.2em; }
-
 /* jsPsych lays out button-trial buttons (welcome, fullscreen, comprehension, debrief) in a row */
 #jspsych-html-button-response-btngroup,
 .jspsych-html-button-response-btngroup {
   display: flex; justify-content: center; gap: 64px; flex-wrap: nowrap;
 }
-/* .dec-prompt / .dec-sub are reused inside .wheel-prompt (the decision prompt at the wheel center) */
 
 /* ---- rating slider ---- */
 .rate-img { width: var(--img-px); height: var(--img-px); object-fit: contain; display: block; margin: 0 auto 22px; border-radius: 6px; }
@@ -183,6 +176,14 @@ html, body {
 /* cover dot sized relative to the (responsive) image; inherits color/shape from .cover-dot */
 .wheel-dot { width: var(--wheel-dot); height: var(--wheel-dot); }
 
+/* decision lockout/unlock cue: red outline while the options are visible but not yet
+   clickable (the deliberation preview), green once choosing is live (see .wheel-choice-btn-pick
+   below). outline (not border) so it doesn't shift the image's layout/position. */
+.wheel-item-outline-deliberate .wheel-img {
+  outline: 3px solid var(--wheel-deliberate);
+  outline-offset: 3px;
+}
+
 /* central hub content: outcome icon, decision prompt, or missed-response flash */
 .wheel-center {
   position: absolute;
@@ -200,26 +201,29 @@ html, body {
   font-size: calc(var(--wheel-img) * 0.24);
   white-space: nowrap;
 }
-.wheel-prompt { max-width: calc(var(--wheel-outer) * 0.95); }
-
 /* decision options: clickable images at their ring positions. jsPsych renders them as
    buttons in the btngroup, which we force to fill the viewport so each button can be
-   absolutely positioned at its wedge (mirrors the .wheel-item geometry). */
+   absolutely positioned at its wedge (mirrors the .wheel-item geometry). The btngroup
+   also carries jsPsych's own .jspsych-btn-group-grid class (default button_layout is
+   "grid"), which sets max-width:fit-content — since our buttons are absolutely
+   positioned (out of flow), fit-content collapses toward 0, so max-width must be
+   reset here or the whole group (and every button's 50%/50% anchor) shrinks into a
+   sliver at the top-left instead of filling the viewport. */
 .wheel-decision #jspsych-html-button-response-btngroup,
 .wheel-decision .jspsych-html-button-response-btngroup {
   position: fixed;
   inset: 0;
   margin: 0;
   padding: 0;
+  max-width: none;
   display: block;
   gap: 0;
   z-index: 2;
   pointer-events: none;      /* only the option images themselves are clickable */
 }
-/* the plugin wraps each button_html in a div (which holds the click listener); make it
-   layout-transparent so the absolutely-positioned inner <button> lands at its wedge, while
-   clicks still bubble from the button up to the wrapper's handler. */
-.wheel-decision .jspsych-html-button-response-button { display: contents; }
+/* button_html()'s returned <button> is inserted directly as a child of the btngroup
+   (no wrapper div in jsPsych 8.x), so .wheel-choice-btn's absolute positioning applies
+   straight to it — no extra layout-transparency rule needed. */
 .wheel-choice-btn {
   position: absolute;
   transform: translate(-50%, -50%);
@@ -233,6 +237,13 @@ html, body {
   pointer-events: auto;
   cursor: pointer;
   transition: border-color 0.12s ease, transform 0.08s ease, box-shadow 0.12s ease;
+}
+/* green outline: the choice is now live/clickable (paired with the red .wheel-item-outline-
+   deliberate cue on the preceding locked preview trial). outline, not border, so the button
+   doesn't shift/resize when the color changes. */
+.wheel-choice-btn-pick {
+  outline: 3px solid var(--wheel-pick);
+  outline-offset: 3px;
 }
 .wheel-choice-btn:hover {
   border-color: var(--accent);

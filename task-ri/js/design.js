@@ -147,8 +147,9 @@ window.SP = window.SP || {};
 
   // --- decision trials ----------------------------------------------------------------
   // 8 unique comparisons (4 indirect A+xA-, 4 direct B+xB-), 5 reps each = 40.
-  // Per comparison the +item is on the left 3x / right 2x (shuffled). All 40 then shuffled
-  // as a block (faithful to the in-lab build_decision_trials — no no-repeat constraint here).
+  // Per comparison the +item is on the left 3x / right 2x (shuffled). The 40 trials are then
+  // ordered via noRepeatSequence over comparison identity so the same exact comparison (same
+  // pair of images, regardless of left/right side) never appears on two consecutive trials.
   function buildDecision(design, pid) {
     const rng = R.makeRNG(pid, 'decision');
     const plusPairs = design.pairs.filter(function (p) { return p.rewarded; });   // 2
@@ -172,14 +173,13 @@ window.SP = window.SP || {};
       });
     });
 
-    let trials = [];
-    comparisons.forEach(function (c) {
-      // +item-on-left pattern: 3 true, 2 false, shuffled per comparison.
+    // Precompute each comparison's 5 trial variants (+item-on-left pattern: 3 true, 2 false).
+    const variantsByComparison = comparisons.map(function (c) {
       const plusLeftSeq = R.shuffle([true, true, true, false, false], rng);
-      plusLeftSeq.forEach(function (plusLeft) {
+      return plusLeftSeq.map(function (plusLeft) {
         const leftFn = plusLeft ? c.plus : c.minus;
         const rightFn = plusLeft ? c.minus : c.plus;
-        trials.push({
+        return {
           comparison_type: c.type,
           plus_filename: c.plus,
           left_filename: leftFn,
@@ -188,10 +188,20 @@ window.SP = window.SP || {};
           right_slice: design.slices[rightFn],
           paired_b_left: plusLeft ? c.plus_pairedB : c.minus_pairedB,
           paired_b_right: plusLeft ? c.minus_pairedB : c.plus_pairedB
-        });
+        };
       });
     });
-    trials = R.shuffle(trials, rng);                  // block shuffle of all 40
+
+    // Order comparison identities (0..7, 5 reps each) so no two consecutive trials are the
+    // same comparison, then consume each comparison's variants in their (already shuffled) order.
+    const entries = comparisons.map(function (c, i) { return [i, 5]; });
+    const compSeq = R.noRepeatSequence(entries, rng);
+    const nextVariantIdx = comparisons.map(function () { return 0; });
+    const trials = compSeq.map(function (compIdx) {
+      const variant = variantsByComparison[compIdx][nextVariantIdx[compIdx]];
+      nextVariantIdx[compIdx]++;
+      return variant;
+    });
     return trials;
   }
 

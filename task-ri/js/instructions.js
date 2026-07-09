@@ -120,10 +120,9 @@ window.SP = window.SP || {};
         'you’ve seen so far. If you’re not sure, make your best guess.</p>'
       ),
       wrap(
-        '<p>When the two images first appear, take a moment to consider them — you won’t be able to ' +
-        'click right away. Then, the images become active and you can <strong>click the one ' +
-        'you choose</strong>.</p>' +
-        '<p>You’ll have 10 seconds to make your choice.</p>' +
+        '<p>When the two images first appear, they’ll have a red outline, indicating you can’t click them yet. '+
+        'Take a moment to consider which one to pick.</p>' + 
+        '<p>When a green outline appears, you’ll have 4 seconds to make your choice.</p>' +
         '<p>Once again, your bonus will be determined by your performance on these choices.</p>'
       )
     ];

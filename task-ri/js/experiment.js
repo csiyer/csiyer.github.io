@@ -119,8 +119,8 @@
     });
   }
 
-  // 5. pre-rating (32 sliders, seeded order)
-  timeline.push(SP.phases.preRatingPhase(pid));
+  // 5. pre-rating (32 sliders, seeded order) — skipped entirely under ?skipto=decision
+  if (!C.DEV.skipToDecision) timeline.push(SP.phases.preRatingPhase(pid));
 
   // 6. generate the per-participant design from the pre-ratings, then run the rest.
   // jsPsych v8 removed addNodeToEndOfTimeline; instead a wrapper node holds a shared array
@@ -131,9 +131,13 @@
   timeline.push({
     type: jsPsychCallFunction,
     func: function () {
-      const rated = jsPsych.data.get().filter({ phase: 'rating_pre' }).values().map(function (r) {
-        return { filename: r.stimulus_filename, rating: r.rating };
-      });
+      const rated = C.DEV.skipToDecision
+        // no pre-rating ran, so fake ratings: buildDesign's neutral-selection only needs
+        // *some* value per candidate, not real data.
+        ? SP.stimuli.pool.map(function (f) { return { filename: f, rating: Math.random() * 2 - 1 }; })
+        : jsPsych.data.get().filter({ phase: 'rating_pre' }).values().map(function (r) {
+          return { filename: r.stimulus_filename, rating: r.rating };
+        });
       const design = SP.design.buildDesign(rated, pid);
       if (C.DEV.quickN) {
         design.associationTrials = design.associationTrials.slice(0, C.DEV.quickN);
@@ -146,9 +150,10 @@
         task_stimuli: design.task.join('|'),
         example_stimuli: design.example.join('|')
       });
+      if (!C.DEV.skipToDecision) {
+        rest.push(SP.phases.associationPhase(design), SP.phases.rewardPhase(design));
+      }
       rest.push(
-        SP.phases.associationPhase(design),
-        SP.phases.rewardPhase(design),
         SP.phases.decisionPhase(design),
         SP.phases.postRatingPhase(design),
         SP.phases.strategyAndDebrief(),
