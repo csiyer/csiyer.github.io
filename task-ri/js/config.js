@@ -78,7 +78,7 @@ SP.config = {
 
   // ---- infrastructure (fill these in before launch) -----------------------
   DATAPIPE_ID: 'Qjq8MSCvwQwg',
-  PROLIFIC_COMPLETION_CODE: 'REPLACE_WITH_PROLIFIC_CODE',
+  PROLIFIC_COMPLETION_CODE: 'CDTWS8LE',
   PROLIFIC_COMPLETION_URL: 'https://app.prolific.com/submissions/complete',
   CONSENT_PDF_URL: 'https://csiyer.github.io/files/online_consent_form.pdf',
 
