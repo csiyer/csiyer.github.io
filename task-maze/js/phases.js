@@ -121,7 +121,7 @@ MM.phases = {};
   function buildPhase1(design) {
     const interstitial = {
       type: window.jsPsychHtmlButtonResponse,
-      stimulus: '<div class="mm-instr-page"><p>Now you\'ll repeat that process one more time to really learn the maze.</p></div>',
+      stimulus: '<div class="mm-instr-page"><p>Well done! Now repeat the exploration again.</p></div>',
       choices: ['Continue'],
       data: { phase: 'phase1_repeat_interstitial' }
     };
