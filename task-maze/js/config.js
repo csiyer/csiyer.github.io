@@ -44,7 +44,7 @@ MM.config = {
   // ---- infrastructure (fill these in before launch) --------------------------
   DATAPIPE_EXPERIMENT_ID: 'VFtioPa7Hm5f',
   CONSENT_PDF_URL: 'https://csiyer.github.io/files/online_consent_form.pdf',
-  PROLIFIC_COMPLETION_CODE: 'FILL_IN_PROLIFIC_COMPLETION_CODE',
+  PROLIFIC_COMPLETION_CODE: 'C1E6BGBR',
   PROLIFIC_COMPLETION_URL: 'https://app.prolific.com/submissions/complete',
 
   // ---- Prolific -------------------------------------------------------------
