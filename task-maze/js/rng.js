@@ -1,11 +1,10 @@
 // rng.js — seeded, deterministic PRNG + helpers. Framework-free (no jsPsych) so the
-// reproducibility-critical logic can be exercised in Node or dev/reproducibility.html.
+// reproducibility-critical logic can be exercised in a browser dev page (see
+// dev/reproducibility.html). Ported verbatim from sensory-preconditioning-repulsion/js/rng.js.
 //
-// Reproducibility contract: same (participant id, stored pre-ratings) => identical
-// selection / assignment / trial order, forever. We do NOT bit-match Python's RNG;
-// instead each "purpose" gets its own independent stream keyed by a string tag, mirroring
-// the in-lab per-phase seed scheme (_participant_seed(pid, tag)).
-window.SP = window.SP || {};
+// Reproducibility contract: same participant id => identical condition / image sampling /
+// trial order, forever. Each "purpose" gets its own independent stream keyed by a string tag.
+window.MM = window.MM || {};
 
 (function () {
   // xmur3: string -> 32-bit seed generator (returns a function producing 32-bit ints).
@@ -34,13 +33,13 @@ window.SP = window.SP || {};
     };
   }
 
-  // One independent stream per purpose. tag e.g. 'select','assign','association',...
+  // One independent stream per purpose. tag e.g. 'condition','landmark_images','phase2_targets',...
   function makeRNG(pid, tag) {
-    const seedFn = xmur3(String(pid) + '|' + tag + '|sp_v1');
+    const seedFn = xmur3(String(pid) + '|' + tag + '|mm_v1');
     return mulberry32(seedFn());
   }
 
-  // Fisher–Yates shuffle (returns a new array; does not mutate input).
+  // Fisher-Yates shuffle (returns a new array; does not mutate input).
   function shuffle(arr, rng) {
     const a = arr.slice();
     for (let i = a.length - 1; i > 0; i--) {
@@ -59,10 +58,18 @@ window.SP = window.SP || {};
     return lo + rng() * (hi - lo);
   }
 
-  // No-immediate-repeat sequence over a multiset — port (in spirit) of the in-lab
-  // _no_repeat_sequence. entries = [[itemValue, count], ...]. Returns a flat array of
-  // itemValues where no two consecutive entries are equal. Uses the greedy
-  // "largest-remaining-first, random tie-break" rule, which always succeeds whenever a
+  function randInt(lo, hi, rng) {
+    // inclusive of both lo and hi
+    return lo + Math.floor(rng() * (hi - lo + 1));
+  }
+
+  function choice(arr, rng) {
+    return arr[Math.floor(rng() * arr.length)];
+  }
+
+  // No-immediate-repeat sequence over a multiset. entries = [[itemValue, count], ...].
+  // Returns a flat array of itemValues where no two consecutive entries are equal. Uses the
+  // greedy "largest-remaining-first, random tie-break" rule, which always succeeds whenever a
   // valid arrangement exists (i.e. max count <= ceil(total/2)).
   function noRepeatSequence(entries, rng, maxAttempts) {
     maxAttempts = maxAttempts || 200;
@@ -87,13 +94,15 @@ window.SP = window.SP || {};
     throw new Error('noRepeatSequence: failed to build a no-immediate-repeat sequence');
   }
 
-  SP.rng = {
+  MM.rng = {
     xmur3: xmur3,
     mulberry32: mulberry32,
     makeRNG: makeRNG,
     shuffle: shuffle,
     sample: sample,
     randFloat: randFloat,
+    randInt: randInt,
+    choice: choice,
     noRepeatSequence: noRepeatSequence
   };
 })();

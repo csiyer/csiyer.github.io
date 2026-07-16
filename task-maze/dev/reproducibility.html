@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>maze-memorability: reproducibility check</title>
+  <style>
+    body { font-family: monospace; padding: 20px; background: #111; color: #ddd; }
+    .pass { color: #4caf50; }
+    .fail { color: #f44336; }
+    pre { background: #1c1c1c; padding: 10px; overflow-x: auto; }
+  </style>
+</head>
+<body>
+  <h2>maze-memorability: design.js reproducibility check</h2>
+  <p>Not loaded by the participant-facing task. Asserts that MM.design.buildDesign(pid) is a
+     pure, deterministic function of `pid` (same pid -&gt; identical condition / landmark
+     sampling / landmark-to-cell assignment / all trial orders, every time).</p>
+  <div id="output">Running...</div>
+
+  <!-- shared stimuli metadata (csiyer.github.io/stimuli/); dev/ is one level deeper than
+       task/, so this needs one extra ../ compared to index.html's stimuli_dir. -->
+  <script src="../../stimuli/stimuli_metadata.js"></script>
+  <script src="../js/config.js"></script>
+  <script src="../js/rng.js"></script>
+  <script src="../js/maze.js"></script>
+  <script src="../js/stimuli.js"></script>
+  <script src="../js/design.js"></script>
+
+  <script>
+    (function () {
+      const out = document.getElementById('output');
+      const lines = [];
+      let allPass = true;
+
+      function check(label, condition) {
+        lines.push('<div class="' + (condition ? 'pass' : 'fail') + '">' + (condition ? 'PASS' : 'FAIL') + ' -- ' + label + '</div>');
+        if (!condition) allPass = false;
+      }
+
+      function deepEqual(a, b) {
+        return JSON.stringify(a) === JSON.stringify(b);
+      }
+
+      // Same pid, twice, built independently -> must be byte-identical.
+      const pidA = 'reproducibility_test_participant_1';
+      const designA1 = MM.design.buildDesign(pidA);
+      const designA2 = MM.design.buildDesign(pidA);
+      check('same pid produces identical condition', designA1.condition === designA2.condition);
+      check('same pid produces identical landmark sampling/assignment', deepEqual(designA1.landmarks, designA2.landmarks));
+      check('same pid produces identical phase2 trial list', deepEqual(designA1.phase2_trials, designA2.phase2_trials));
+      check('same pid produces identical phase3 trial list', deepEqual(designA1.phase3_trials, designA2.phase3_trials));
+      check('same pid produces identical phase4 trial list', deepEqual(designA1.phase4_trials, designA2.phase4_trials));
+
+      // Structural sanity checks (counts, no zero-count issues, etc).
+      check('exactly n_landmarks (6) landmarks assigned', designA1.landmarks.length === MM.config.n_landmarks);
+      check('phase2 trial count matches config', designA1.phase2_trials.length === MM.config.n_phase2_trials);
+      check('phase3 trial count matches config (one per landmark)', designA1.phase3_trials.length === MM.config.n_phase3_trials);
+      check('phase4 trial count matches config (all pairs)', designA1.phase4_trials.length === MM.config.n_phase4_trials);
+
+      const phase2TargetKeys = designA1.phase2_trials.map(function (t) { return t.target_row + ',' + t.target_col; });
+      check('phase2 targets are all distinct cells', new Set(phase2TargetKeys).size === phase2TargetKeys.length);
+
+      const landmarkCellKeys = new Set(designA1.landmarks.map(function (lm) { return lm.row + ',' + lm.col; }));
+      const phase2AvoidsLandmarks = designA1.phase2_trials.every(function (t) {
+        return !landmarkCellKeys.has(t.target_row + ',' + t.target_col) && !landmarkCellKeys.has(t.start_row + ',' + t.start_col);
+      });
+      check('phase2 targets and starts never land on a landmark cell', phase2AvoidsLandmarks);
+
+      const phase3Landmarks = designA1.phase3_trials.map(function (t) { return t.landmark_id; }).sort();
+      check('phase3 covers each landmark exactly once', deepEqual(phase3Landmarks, [0, 1, 2, 3, 4, 5]));
+
+      const phase4PairKeys = new Set(designA1.phase4_trials.map(function (t) {
+        return [t.landmark_a_id, t.landmark_b_id].sort().join('-');
+      }));
+      check('phase4 covers all 15 unordered pairs exactly once', phase4PairKeys.size === 15);
+
+      // Different pids should (almost always) differ in condition/landmarks/order -- not a
+      // strict guarantee, just an eyeball sanity check that randomization is doing something.
+      const pidB = 'reproducibility_test_participant_2';
+      const designB = MM.design.buildDesign(pidB);
+      check('a different pid produces a different design (sanity, not a strict requirement)',
+        !deepEqual(designA1.landmarks, designB.landmarks) || designA1.condition !== designB.condition);
+
+      lines.push('<h3>Sample design (pid=' + pidA + ')</h3>');
+      lines.push('<pre>' + JSON.stringify(designA1, null, 2) + '</pre>');
+
+      out.innerHTML = '<h3 class="' + (allPass ? 'pass' : 'fail') + '">' + (allPass ? 'ALL CHECKS PASSED' : 'SOME CHECKS FAILED') + '</h3>' + lines.join('');
+    })();
+  </script>
+</body>
+</html>
