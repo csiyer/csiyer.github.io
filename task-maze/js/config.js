@@ -23,6 +23,7 @@ MM.config = {
   reached_flash_ms: 300,          // brief "Reached!" flash at the end of a phase2 trial
 
   // ---- trial counts -----------------------------------------------------
+  n_phase1_reps: 3,         // landmark discovery runs this many times back to back
   n_phase2_trials: 10,
   n_phase3_trials: 6,       // == n_landmarks, one recall trial per landmark
   n_phase4_trials: 15,      // == C(6,2), all unordered landmark pairs

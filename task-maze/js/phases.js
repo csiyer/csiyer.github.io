@@ -115,19 +115,23 @@ MM.phases = {};
     };
   }
 
-  // Phase 1 (landmark discovery) runs twice back to back, with a short interstitial in
-  // between, so participants get a second pass to consolidate the maze/landmark layout.
+  // Phase 1 (landmark discovery) runs MM.config.n_phase1_reps times back to back, with a
+  // short interstitial between each pass, so participants get repeated exposure to
+  // consolidate the maze/landmark layout.
   function buildPhase1(design) {
-    return [
-      buildExploreTrial(design, 0),
-      {
-        type: window.jsPsychHtmlButtonResponse,
-        stimulus: '<div class="mm-instr-page"><p>Now you\'ll repeat that process one more time to really learn the maze.</p></div>',
-        choices: ['Continue'],
-        data: { phase: 'phase1_repeat_interstitial' }
-      },
-      buildExploreTrial(design, 1)
-    ];
+    const interstitial = {
+      type: window.jsPsychHtmlButtonResponse,
+      stimulus: '<div class="mm-instr-page"><p>Now you\'ll repeat that process one more time to really learn the maze.</p></div>',
+      choices: ['Continue'],
+      data: { phase: 'phase1_repeat_interstitial' }
+    };
+
+    const trials = [];
+    for (let rep = 0; rep < MM.config.n_phase1_reps; rep++) {
+      if (rep > 0) trials.push(interstitial);
+      trials.push(buildExploreTrial(design, rep));
+    }
+    return trials;
   }
 
   function buildLeadIn(labelHtml) {
