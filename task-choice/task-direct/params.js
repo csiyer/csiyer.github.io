@@ -37,7 +37,7 @@ const params = {
     data_pipe_id: "0eMBjYEVa3qX",
     osf_project_id: "2cm34",
     osf_component_id: "8d2cb",
-    prolific_completion_code: "CBOBLRMG", // TODO: set a dedicated completion code for this task before deploying
+    prolific_completion_code: "CEEKTYHV",
 
     consent_pdf: "https://csiyer.github.io/files/online_consent_form.pdf",
     stimuli_dir: "../../stimuli",
