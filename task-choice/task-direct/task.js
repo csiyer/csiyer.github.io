@@ -204,6 +204,20 @@ function drawValueReportFeedbackDisplay(ctx, trial, chosenValue, correct) {
     }
 }
 
+function drawValueReportTooSlowDisplay(ctx, trial) {
+    const layout = drawValueReportDisplay(ctx, trial);
+    ctx.save();
+    ctx.fillStyle = "#cc2222";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "top";
+    const msgY = layout.optY + layout.optSize + 14;
+    ctx.font = "bold 30px Inter, sans-serif";
+    ctx.fillText("Too slow!", ctx.canvas.width / 2, msgY);
+    ctx.font = "17px Inter, sans-serif";
+    ctx.fillText("You need to respond to both the memory choice and value choice trials.", ctx.canvas.width / 2, msgY + 38);
+    ctx.restore();
+}
+
 // ─── Instruction content ──────────────────────────────────────────────────────
 function buildInstructionPages() {
     const allVals = formatPossibleValues();
@@ -519,7 +533,10 @@ function buildChoiceTrial(jsPsych, trialSpec) {
                     old_value: trial.old_side === "left" ? trial.left.value : trial.right.value,
                     repeat_source_was_chosen: trial.repeat_source_was_chosen,
                     repeat_source_fallback_side: trial.repeat_source_fallback_side,
-                    recognition_correct: Number(recognitionCorrect),
+                    // null (not 0) on a miss -- a timeout isn't a wrong answer,
+                    // and conflating the two skews accuracy for anyone whose
+                    // responses aren't registering (see value_test_correct below).
+                    recognition_correct: responded ? Number(recognitionCorrect) : null,
                 });
             } else {
                 const chosenCard = trial[chosenSide || autoSide];
@@ -625,7 +642,8 @@ function buildValueReportTrial() {
                 old_image_path: oldCard.image_path,
                 value_test_response: chosenValue,
                 value_test_missed: Number(!responded),
-                value_test_correct: Number(correct),
+                // null (not 0) on a miss -- see the matching note in buildChoiceTrial.
+                value_test_correct: responded ? Number(correct) : null,
                 timestamp: new Date().toISOString(),
             });
         }
@@ -634,17 +652,39 @@ function buildValueReportTrial() {
 
 function buildValueReportFeedbackTrial() {
     return {
-        type: jsPsychCanvasKeyboardResponse,
-        canvas_size: [620, 1060],
-        choices: "NO_KEYS",
-        trial_duration: params.value_feedback_duration,
-        stimulus(canvas) {
-            drawValueReportFeedbackDisplay(
-                canvas.getContext("2d"),
-                TASK_STATE.currentTrial,
-                TASK_STATE.valueTestChosenValue,
-                TASK_STATE.valueTestCorrect
-            );
+        timeline: [{
+            type: jsPsychCanvasKeyboardResponse,
+            canvas_size: [620, 1060],
+            choices: "NO_KEYS",
+            trial_duration: params.value_feedback_duration,
+            stimulus(canvas) {
+                drawValueReportFeedbackDisplay(
+                    canvas.getContext("2d"),
+                    TASK_STATE.currentTrial,
+                    TASK_STATE.valueTestChosenValue,
+                    TASK_STATE.valueTestCorrect
+                );
+            }
+        }],
+        conditional_function() {
+            return TASK_STATE.valueTestChosenValue !== null;
+        }
+    };
+}
+
+function buildValueReportTooSlowTrial() {
+    return {
+        timeline: [{
+            type: jsPsychCanvasKeyboardResponse,
+            canvas_size: [620, 1060],
+            choices: "NO_KEYS",
+            trial_duration: params.too_slow_duration,
+            stimulus(canvas) {
+                drawValueReportTooSlowDisplay(canvas.getContext("2d"), TASK_STATE.currentTrial);
+            }
+        }],
+        conditional_function() {
+            return TASK_STATE.valueTestChosenValue === null;
         }
     };
 }
@@ -881,6 +921,7 @@ function initTask(jsPsych, prolific_id) {
         } else {
             timeline.push(buildValueReportTrial());
             timeline.push(buildValueReportFeedbackTrial());
+            timeline.push(buildValueReportTooSlowTrial());
         }
         timeline.push(buildBlankCanvasTrial(params.iti));
 
