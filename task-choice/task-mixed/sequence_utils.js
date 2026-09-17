@@ -58,7 +58,7 @@
     }
 
     // Numeric ret_type codes retained for backward-compat with existing analysis
-    // scripts (episodic-choice-task/analysis.R / .ipynb expect 1-4):
+    // scripts (analysis/analysis.R / .ipynb expect 1-4):
     //   1: H=$0, L=$1     2: H=$1, L=$0     3: both $0     4: both $1
     const RET_TYPE_CODES = {
         uneven_h0: 1,
