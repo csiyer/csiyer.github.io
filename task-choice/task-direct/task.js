@@ -340,7 +340,7 @@ function buildInstructionPages() {
                 <li>If neither, it will flip over and you will learn its value.</li>
                 <li>If one appeared before, you will then report how much it was worth ('j' = $0 / 'k' = $1.)</li>
                 <li>Your bonus depends on your accuracy.</li>
-                <li>The experiment will last roughly ${params.completion_time} minutes, with 3 short breaks.</li>
+                <li>The experiment will last roughly ${params.completion_time} minutes, with 2 short breaks.</li>
             </ul>
             ${nav}
         </div>`,

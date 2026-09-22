@@ -256,7 +256,7 @@ function buildInstructionPages() {
                 <li>Use the <strong>'j'</strong> and <strong>'k'</strong> keys to choose the left or right cards.</li>
                 <li>Each card will always be worth the same amount of money if you see it again.</li>
                 <li>Use your memory to select good cards and avoid bad ones.</li>
-                <li>The experiment will last roughly <strong>${params.completion_time} minutes</strong>, with 3 short breaks.</li>
+                <li>The experiment will last roughly <strong>${params.completion_time} minutes</strong>, with 2 short breaks.</li>
             </ul>
             ${nav}
         </div>`,

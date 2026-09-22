@@ -1,5 +1,5 @@
 const params = {
-    experiment_id: "direct_value_memtest-8-7-26",
+    experiment_id: "exp2-prereg-092226",
 
     n_trials: 312,
     n_blocks: 3,

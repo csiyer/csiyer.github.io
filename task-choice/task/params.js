@@ -1,5 +1,5 @@
 const params = {
-    experiment_id: "main_task-7-3-26",
+    experiment_id: "exp1-prereg-092226",
 
     n_trials: 312,
     n_blocks: 3,
