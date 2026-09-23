@@ -805,7 +805,7 @@ function initTask(jsPsych, prolific_id) {
         fullscreen_mode: true,
         message: `<div class="instruction-container" style="max-width:920px;">
             <h2>Welcome!</h2>
-            <p>This study takes about <strong>${params.completion_time} minutes</strong>. You will earn <strong>$${params.base_pay}</strong> plus a bonus of up to <strong>$${params.max_bonus}</strong>. Your bonus depends on your performance.</p>
+            <p>This study takes about <strong>${params.completion_time} minutes</strong>. You will earn <strong>$${params.base_pay}</strong> plus a bonus of up to <strong>$${params.max_bonus}</strong>.</p>
             <p>The data collected is for scientific research, so we ask you give your full attention and respond honestly and without the assistance of AI computer use.</p>
             <p>Please review the consent form below, and feel free to download a copy for your records.</p>
             <iframe src="${params.consent_pdf}" width="100%" height="480"
