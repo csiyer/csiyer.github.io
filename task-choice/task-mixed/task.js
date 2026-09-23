@@ -534,7 +534,7 @@ function buildInstructionPages() {
         `<div class="instruction-container">
             <p>The possible card values are: <strong>${allVals}</strong></p>
             ${feedbackImgList}
-            <p><strong>To get more bonus money, try your best to select the good cards and avoid the bad ones! Your bonus will scale with how far your choices exceed random guessing, up to the full $${params.max_bonus} at ${Math.round(params.bonus_full_accuracy * 100)}% accuracy.</strong></p>
+            <p><strong>To get more bonus money, try your best to select the good cards and avoid the bad ones! Your bonus starts once your choices are clearly (statistically) better than random guessing, and grows from there to the full $${params.max_bonus} at ${Math.round(params.bonus_full_accuracy * 100)}% accuracy.</strong></p>
             ${nav}
         </div>`,
 

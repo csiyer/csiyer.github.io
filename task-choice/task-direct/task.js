@@ -339,7 +339,7 @@ function buildInstructionPages() {
                 <li>Use <strong>'j'</strong> / <strong>'k'</strong> to pick <strong>which card you think appeared before</strong>.</li>
                 <li>If neither, it will flip over and you will learn its value.</li>
                 <li>If one appeared before, you will then report how much it was worth ('j' = $0 / 'k' = $1.)</li>
-                <li>Your bonus depends on your accuracy. It will scale with how far your answers exceed random guessing, up to the full $${params.max_bonus} at ${Math.round(params.bonus_full_accuracy * 100)}% accuracy.</li>
+                <li>Your bonus starts once your answers are clearly (statistically) better than random guessing, and grows from there to the full $${params.max_bonus} at ${Math.round(params.bonus_full_accuracy * 100)}% accuracy.</li>
                 <li>The experiment will last roughly ${params.completion_time} minutes, with 2 short breaks.</li>
             </ul>
             ${nav}
