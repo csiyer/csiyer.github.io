@@ -27,9 +27,14 @@ const params = {
     choice_highlight_color: "#3b82f6", // blue: new/new choice highlight (overrides highlight_color for choice trials)
     incorrect_color: "#ef4444",       // red: memory-test "incorrect" highlight
 
-    // Bonus is accuracy-only: chance-adjusted recognition + value-test accuracy.
+    // Bonus is accuracy-only (combined recognition + value-report accuracy):
+    // $0 at the binomial pass mark (fewest correct that is significantly above
+    // chance, one-sided p < bonus_alpha), rising linearly to max_bonus at
+    // bonus_full_accuracy. $0 if an AI is detected, >= 2 attention checks are
+    // failed, or recognition accuracy isn't significantly above chance.
     // $ values shown on new/new trials are NOT summed into the bonus.
-    bonus_chance_accuracy: 0.5,
+    bonus_alpha: 0.05,
+    bonus_full_accuracy: 0.9,
 
     completion_time: 25,
     base_pay: 5,

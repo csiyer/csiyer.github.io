@@ -26,7 +26,12 @@ const params = {
     completion_time: 25,
     base_pay: 5,
     max_bonus: 2,
-    bonus_sample_n: 10,
+    // Bonus: $0 at the binomial pass mark (fewest correct that is significantly
+    // above chance, one-sided p < bonus_alpha), rising linearly to max_bonus at
+    // bonus_full_accuracy. $0 if an AI is detected, >= 2 attention checks are
+    // failed, or accuracy isn't significantly above chance.
+    bonus_alpha: 0.05,
+    bonus_full_accuracy: 0.9,
     data_pipe_id: "0eMBjYEVa3qX",
     osf_project_id: "2cm34",
     osf_component_id: "8d2cb",

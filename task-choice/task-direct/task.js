@@ -339,7 +339,7 @@ function buildInstructionPages() {
                 <li>Use <strong>'j'</strong> / <strong>'k'</strong> to pick <strong>which card you think appeared before</strong>.</li>
                 <li>If neither, it will flip over and you will learn its value.</li>
                 <li>If one appeared before, you will then report how much it was worth ('j' = $0 / 'k' = $1.)</li>
-                <li>Your bonus depends on your accuracy.</li>
+                <li>Your bonus depends on your accuracy. It will scale with how far your answers exceed random guessing, up to the full $${params.max_bonus} at ${Math.round(params.bonus_full_accuracy * 100)}% accuracy.</li>
                 <li>The experiment will last roughly ${params.completion_time} minutes, with 2 short breaks.</li>
             </ul>
             ${nav}
@@ -818,7 +818,7 @@ function initTask(jsPsych, prolific_id) {
         fullscreen_mode: true,
         message: `<div class="instruction-container" style="max-width:920px;">
             <h2>Welcome!</h2>
-            <p>This study takes about <strong>${params.completion_time} minutes</strong>. You will earn <strong>$${params.base_pay}</strong> plus a bonus of up to <strong>$${params.max_bonus}</strong>.</p>
+            <p>This study takes about <strong>${params.completion_time} minutes</strong>. You will earn <strong>$${params.base_pay}</strong> plus a bonus of up to <strong>$${params.max_bonus}</strong>. Your bonus depends on your performance.</p>
             <p>The data collected is for scientific research, so we ask you give your full attention and respond honestly and without the assistance of AI computer use.</p>
             <p>Please review the consent form below, and feel free to download a copy for your records.</p>
             <iframe src="${params.consent_pdf}" width="100%" height="480"
@@ -960,8 +960,11 @@ function initTask(jsPsych, prolific_id) {
             data.n_value_trials = b.nValueTrials;
             data.n_value_correct = b.nValueCorrect;
             data.value_accuracy = b.valueAccuracy;
-            data.bonus_chance_accuracy = params.bonus_chance_accuracy;
-            data.chance_adjusted_accuracy = b.chanceAdjustedAccuracy;
+            data.bonus_accuracy = b.accuracy;
+            data.bonus_pass_mark = b.passMark;
+            data.bonus_passed_chance = b.passedChance;
+            data.bonus_n_attention_failed = b.nAttentionFailed;
+            data.bonus_ai_detected = b.aiDetected;
             data.final_bonus = b.bonus.toFixed(2);
         }
     });
@@ -1049,36 +1052,70 @@ function buildCardFromStimulus(stimulus, value, isOld) {
 }
 
 // ─── Bonus calculation (accuracy-only: recognition + value-report) ───────────
+// Scored trials are responded recognition and value-report trials (misses are
+// logged as null). The chance test uses recognition trials only, the same as
+// the exclusion in count_participants.py; the bonus scales on combined accuracy.
 function getBonusSummary(jsPsych) {
     if (TASK_STATE.bonusSummary) return TASK_STATE.bonusSummary;
 
-    const recognitionTrials = jsPsych.data.get().filterCustom(t => t.is_recognition_trial === true).values();
-    const valueTrials = jsPsych.data.get().filterCustom(t => t.is_value_test_trial).values();
+    const recognitionTrials = jsPsych.data.get()
+        .filterCustom(t => t.is_recognition_trial === true && t.recognition_correct != null).values();
+    const valueTrials = jsPsych.data.get()
+        .filterCustom(t => t.is_value_test_trial && t.value_test_correct != null).values();
 
     const nRecognitionTrials = recognitionTrials.length;
-    const nRecognitionCorrect = recognitionTrials.filter(t => t.recognition_correct).length;
+    const nRecognitionCorrect = recognitionTrials.filter(t => t.recognition_correct === 1).length;
     const recognitionAccuracy = nRecognitionTrials > 0 ? nRecognitionCorrect / nRecognitionTrials : 0;
 
     const nValueTrials = valueTrials.length;
-    const nValueCorrect = valueTrials.filter(t => t.value_test_correct).length;
+    const nValueCorrect = valueTrials.filter(t => t.value_test_correct === 1).length;
     const valueAccuracy = nValueTrials > 0 ? nValueCorrect / nValueTrials : 0;
 
-    const totalTrials = nRecognitionTrials + nValueTrials;
-    const totalCorrect = nRecognitionCorrect + nValueCorrect;
-    const overallAccuracy = totalTrials > 0 ? totalCorrect / totalTrials : 0;
+    const passedChance = nRecognitionTrials > 0
+        && nRecognitionCorrect >= binomialPassCount(nRecognitionTrials, params.bonus_alpha);
 
-    const chanceAccuracy = params.bonus_chance_accuracy;
-    const chanceAdjustedAccuracy = chanceAccuracy < 1
-        ? EpisodicChoiceSequence.clamp((overallAccuracy - chanceAccuracy) / (1 - chanceAccuracy), 0, 1)
-        : 0;
-    const bonus = chanceAdjustedAccuracy * params.max_bonus;
-
-    TASK_STATE.bonusSummary = {
-        nRecognitionTrials, nRecognitionCorrect, recognitionAccuracy,
-        nValueTrials, nValueCorrect, valueAccuracy,
-        overallAccuracy, chanceAdjustedAccuracy, bonus,
-    };
+    TASK_STATE.bonusSummary = Object.assign(
+        {
+            nRecognitionTrials, nRecognitionCorrect, recognitionAccuracy,
+            nValueTrials, nValueCorrect, valueAccuracy,
+        },
+        computeBonus(jsPsych, nRecognitionCorrect + nValueCorrect, nRecognitionTrials + nValueTrials, passedChance),
+    );
     return TASK_STATE.bonusSummary;
+}
+
+// Fewest correct out of n that is significantly above chance (one-sided
+// binomial test vs. 0.5, p < alpha) -- the same test as the exclusion
+// criterion in scripts/count_participants.py.
+function binomialPassCount(n, alpha) {
+    let pmf = Math.pow(0.5, n);   // P(X = n)
+    let tail = 0;                 // P(X >= k)
+    for (let k = n; k >= 0; k--) {
+        tail += pmf;
+        if (tail >= alpha) return k + 1;
+        pmf *= k / (n - k + 1);   // P(X = k - 1)
+    }
+    return 0;
+}
+
+// $0 if an AI agent is detected (X pressed on an attention check), >= 2
+// attention checks are failed, or passedChance is false. Otherwise $0 at the
+// pass mark for nCorrect/n, rising linearly to max_bonus at bonus_full_accuracy.
+function computeBonus(jsPsych, nCorrect, n, passedChance) {
+    const checks = jsPsych.data.get().filterCustom(t => t.is_attention_check === true).values();
+    const aiDetected = checks.some(t => t.response_key === "x");
+    const nAttentionFailed = checks.filter(t => !t.success).length;
+
+    const accuracy = n > 0 ? nCorrect / n : 0;
+    const passMark = n > 0 ? binomialPassCount(n, params.bonus_alpha) / n : 1;
+    const scaled = passMark < params.bonus_full_accuracy
+        ? EpisodicChoiceSequence.clamp((accuracy - passMark) / (params.bonus_full_accuracy - passMark), 0, 1)
+        : 0;
+    const zeroed = aiDetected || nAttentionFailed >= 2 || !passedChance;
+    return {
+        accuracy, passMark, aiDetected, nAttentionFailed, passedChance,
+        bonus: zeroed ? 0 : scaled * params.max_bonus,
+    };
 }
 
 function loadStimulusMetadata() {

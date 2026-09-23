@@ -245,7 +245,7 @@ function buildInstructionPages() {
         `<div class="instruction-container">
             <p>The possible card values are: <strong>${allVals}</strong></p>
             ${feedbackImgList}
-            <p><strong>To get more bonus money, try your best to select the good cards and avoid the bad ones!</strong></p>
+            <p><strong>To get more bonus money, try your best to select the good cards and avoid the bad ones! Your bonus will scale with how far your choices exceed random guessing, up to the full $${params.max_bonus} at ${Math.round(params.bonus_full_accuracy * 100)}% accuracy.</strong></p>
             ${nav}
         </div>`,
 
@@ -699,7 +699,7 @@ function initTask(jsPsych, prolific_id) {
         fullscreen_mode: true,
         message: `<div class="instruction-container" style="max-width:920px;">
             <h2>Welcome!</h2>
-            <p>This study takes about <strong>${params.completion_time} minutes</strong>. You will earn <strong>$${params.base_pay}</strong> plus a bonus of up to <strong>$${params.max_bonus}</strong>.</p>
+            <p>This study takes about <strong>${params.completion_time} minutes</strong>. You will earn <strong>$${params.base_pay}</strong> plus a bonus of up to <strong>$${params.max_bonus}</strong>. Your bonus depends on your performance.</p>
             <p>The data collected is for scientific research, so we ask you give your full attention and respond honestly and without the assistance of AI computer use.</p>
             <p>Please review the consent form below, and feel free to download a copy for your records.</p>
             <iframe src="${params.consent_pdf}" width="100%" height="480"
@@ -817,8 +817,6 @@ function initTask(jsPsych, prolific_id) {
             const b = getBonusSummary(jsPsych);
             return `<div class="instruction-container">
                 <h2>Finished!</h2>
-                <p>We sampled <strong>${b.sampledTrials.length}</strong> old-card trials for your bonus.</p>
-                <p>Your sampled total was <strong>${formatCurrency(b.sampledReward)}</strong>.</p>
                 <p>Your bonus will be <strong>$${b.bonus.toFixed(2)}</strong>.</p>
                 <p>Your final pay will be <strong>$${(params.base_pay + b.bonus).toFixed(2)}</strong>.</p>
                 <p>Thank you for your participation!</p>
@@ -828,9 +826,13 @@ function initTask(jsPsych, prolific_id) {
         on_finish(data) {
             const b = getBonusSummary(jsPsych);
             data.is_summary = true;
-            data.sampled_old_trial_numbers = JSON.stringify(b.sampledTrialNumbers);
-            data.sampled_old_rewards = JSON.stringify(b.sampledRewards);
-            data.sampled_old_total = b.sampledReward.toFixed(2);
+            data.bonus_n_scored = b.nScored;
+            data.bonus_n_correct = b.nCorrect;
+            data.bonus_accuracy = b.accuracy;
+            data.bonus_pass_mark = b.passMark;
+            data.bonus_passed_chance = b.passedChance;
+            data.bonus_n_attention_failed = b.nAttentionFailed;
+            data.bonus_ai_detected = b.aiDetected;
             data.final_bonus = b.bonus.toFixed(2);
         }
     });
@@ -914,25 +916,57 @@ function buildCardFromStimulus(stimulus, value, isOld) {
 }
 
 // ─── Bonus calculation ────────────────────────────────────────────────────────
+// Scored trials are responded old trials with a better card (optimal_choice
+// non-null) -- the same trials as the chance exclusion in count_participants.py.
 function getBonusSummary(jsPsych) {
     if (TASK_STATE.bonusSummary) return TASK_STATE.bonusSummary;
 
-    const oldTrials = jsPsych.data.get()
-        .filterCustom(t => t.is_choice_trial && t.trial_type === "old")
+    const scored = jsPsych.data.get()
+        .filterCustom(t => t.is_choice_trial && t.trial_type === "old" && t.optimal_choice != null)
         .values();
-    const sampleN = Math.min(params.bonus_sample_n, oldTrials.length);
-    const rng = EpisodicChoiceSequence.makeRandomHelpers();
-    const sampledTrials = sampleN > 0 ? rng.sample(oldTrials, sampleN) : [];
-    sampledTrials.forEach(t => { t.bonus_sampled = true; });
+    const nScored = scored.length;
+    const nCorrect = scored.filter(t => t.optimal_choice === 1).length;
+    const passedChance = nScored > 0 && nCorrect >= binomialPassCount(nScored, params.bonus_alpha);
 
-    const sampledRewards = sampledTrials.map(t => Number(t.reward) || 0);
-    const sampledReward = sampledRewards.reduce((s, v) => s + v, 0);
-    const maxPossible = Math.max(...params.possible_values);
-    const normalized = sampleN > 0 ? sampledReward / (sampleN * maxPossible) : 0;
-    const bonus = EpisodicChoiceSequence.clamp(normalized * params.max_bonus, 0, params.max_bonus);
-
-    TASK_STATE.bonusSummary = { sampledTrials, sampledTrialNumbers: sampledTrials.map(t => t.trial_number), sampledRewards, sampledReward, bonus };
+    TASK_STATE.bonusSummary = Object.assign(
+        { nScored, nCorrect },
+        computeBonus(jsPsych, nCorrect, nScored, passedChance),
+    );
     return TASK_STATE.bonusSummary;
+}
+
+// Fewest correct out of n that is significantly above chance (one-sided
+// binomial test vs. 0.5, p < alpha) -- the same test as the exclusion
+// criterion in scripts/count_participants.py.
+function binomialPassCount(n, alpha) {
+    let pmf = Math.pow(0.5, n);   // P(X = n)
+    let tail = 0;                 // P(X >= k)
+    for (let k = n; k >= 0; k--) {
+        tail += pmf;
+        if (tail >= alpha) return k + 1;
+        pmf *= k / (n - k + 1);   // P(X = k - 1)
+    }
+    return 0;
+}
+
+// $0 if an AI agent is detected (X pressed on an attention check), >= 2
+// attention checks are failed, or passedChance is false. Otherwise $0 at the
+// pass mark for nCorrect/n, rising linearly to max_bonus at bonus_full_accuracy.
+function computeBonus(jsPsych, nCorrect, n, passedChance) {
+    const checks = jsPsych.data.get().filterCustom(t => t.is_attention_check === true).values();
+    const aiDetected = checks.some(t => t.response_key === "x");
+    const nAttentionFailed = checks.filter(t => !t.success).length;
+
+    const accuracy = n > 0 ? nCorrect / n : 0;
+    const passMark = n > 0 ? binomialPassCount(n, params.bonus_alpha) / n : 1;
+    const scaled = passMark < params.bonus_full_accuracy
+        ? EpisodicChoiceSequence.clamp((accuracy - passMark) / (params.bonus_full_accuracy - passMark), 0, 1)
+        : 0;
+    const zeroed = aiDetected || nAttentionFailed >= 2 || !passedChance;
+    return {
+        accuracy, passMark, aiDetected, nAttentionFailed, passedChance,
+        bonus: zeroed ? 0 : scaled * params.max_bonus,
+    };
 }
 
 // ─── Analysis helpers ─────────────────────────────────────────────────────────
