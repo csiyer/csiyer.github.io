@@ -25,6 +25,7 @@ const params = {
     feedback_duration: 500,
     min_fixation_duration: 500,
     too_fast_rt: 300,
+    attention_check_duration: 5000,   // unanswered attention checks time out (and count as failed)
 
     completion_time: 25,
     base_pay: 5,
@@ -368,16 +369,16 @@ function initTurnstile(jsPsych) {
 
 // ─── Instructions (Li et al.'s wording) ───────────────────────────────────────
 const RATING_INSTRUCTIONS = `
-    <p>You will see a series of pictures of food. Imagine you had to eat one of these foods today.</p>
-    <p>For each picture, please rate how much you would <b>prefer to eat</b> that food. You will rate each picture on a scale from 0 to 10, with 0 being that you would not want to eat that food at all and 10 being that you most strongly prefer to eat that food.</p>
-    <p>When rating the pictures, think about a snack-sized portion of the food rather than the exact amount of food shown in the picture. Use the mouse to move the indicator bar along the scale to indicate your preference. There are no right answers. <u>Please rate only according to your own preference</u>.</p>`;
+    <p class="instruct">You will see a series of pictures of food. Imagine you had to eat one of these foods today.</p>
+    <p class="instruct">For each picture, please rate how much you would <b>prefer to eat</b> that food. You will rate each picture on a scale from 0 to 10, with 0 being that you would not want to eat that food at all and 10 being that you most strongly prefer to eat that food.</p>
+    <p class="instruct">When rating the pictures, think about a snack-sized portion of the food rather than the exact amount of food shown in the picture. Use the mouse to move the indicator bar along the scale to indicate your preference. There are no right answers. <u>Please rate only according to your own preference</u>.</p>`;
 
 const CHOICE_INSTRUCTIONS = `
-    <p>Imagine you have to choose a food to eat right now. On each trial, you will see a food picture on the left and a different food picture on the right.</p>
-    <p>For each trial, indicate whether you <b>'Prefer'</b> the food on the left by pressing the 'j' key on the keyboard or instead 'Prefer' the food on the right by pressing the 'k' key.</p>
-    <p>When making your choice think about snack-sized portions of the foods rather than the exact amount of food shown in the pictures. There are no right answers. <u>Please choose only according to your own preference</u>.</p>
-    <p><u>Trial length <b>will not</b> be shorter when you respond quickly. The experiment will take the same amount of time if you respond more quickly or more slowly. Please make decisions with full consideration of both choice options.</u></p>
-    <p>Press "j" to select the stimulus on the left and "k" to select the stimulus on the right. You will have up to ${params.choice_duration / 1000} seconds to make your choice.</p>`;
+    <p class="instruct">Imagine you have to choose a food to eat right now. On each trial, you will see a food picture on the left and a different food picture on the right.</p>
+    <p class="instruct">For each trial, indicate whether you <b>'Prefer'</b> the food on the left by pressing the 'j' key on the keyboard or instead 'Prefer' the food on the right by pressing the 'k' key.</p>
+    <p class="instruct">When making your choice think about snack-sized portions of the foods rather than the exact amount of food shown in the pictures. There are no right answers. <u>Please choose only according to your own preference</u>.</p>
+    <p class="instruct"><u>Trial length <b>will not</b> be shorter when you respond quickly. The experiment will take the same amount of time if you respond more quickly or more slowly. Please make decisions with full consideration of both choice options.</u></p>
+    <p class="instruct">Press "j" to select the stimulus on the left and "k" to select the stimulus on the right. You will have up to ${params.choice_duration / 1000} seconds to make your choice.</p>`;
 
 // Li et al.'s comprehension questions; `answer` is the correct option.
 const RATING_QUIZ = [
@@ -394,6 +395,18 @@ const CHOICE_QUIZ = [
 // after that many failed attempts the participant is asked to return the study (same rule as the other tasks);
 // without it (choice phase, after the ratings are done), the quiz repeats until passed.
 function buildGatedInstructions(jsPsych, phase, title, instructionsHtml, quiz, maxAttempts = Infinity) {
+    // as in Li et al.: the rating instructions advance with a button, the choice instructions with j/k
+    const instructionsTrial = phase === "rating"
+        ? {
+            type: jsPsychHtmlButtonResponse,
+            stimulus: `<p class="title">${title}</p>${instructionsHtml}<p class="instruct">Click the button to continue</p>`,
+            choices: ["continue"],
+        }
+        : {
+            type: jsPsychHtmlKeyboardResponse,
+            stimulus: `<p class="title">${title}</p>${instructionsHtml}<p class="instruct">Press "j" or "k" to continue.</p>`,
+            choices: ["j", "k"],
+        };
     let attempts = 0;
     let failedLast = false;
     return {
@@ -409,16 +422,11 @@ function buildGatedInstructions(jsPsych, phase, title, instructionsHtml, quiz, m
                 }],
                 conditional_function() { return failedLast; },
             },
-            {
-                type: jsPsychHtmlButtonResponse,
-                stimulus: `<div class="instruction-container"><h2>${title}</h2>${instructionsHtml}</div>`,
-                choices: ["Continue"],
-                data: { is_instructions: true, phase },
-            },
+            Object.assign(instructionsTrial, { data: { is_instructions: true, phase } }),
             {
                 type: jsPsychSurveyMultiChoice,
-                preamble: `<div class="instruction-container"><h2>${title}</h2>${instructionsHtml}
-                    <p><b>Please read the task instructions above carefully and answer the following questions. You must answer every question correctly to continue.</b></p></div>`,
+                preamble: `${instructionsHtml}
+                    <p>Please read the task instructions above carefully and answer the following questions. You must answer every question correctly to continue.</p>`,
                 questions: quiz.map((q, i) => ({ prompt: q.prompt, options: q.options, required: true, name: `q${i + 1}` })),
                 button_label: "Submit Answers",
                 data: { is_quiz_trial: true, phase },
@@ -454,17 +462,16 @@ function buildGatedInstructions(jsPsych, phase, title, instructionsHtml, quiz, m
 function buildStartTrial() {
     return {
         type: jsPsychHtmlKeyboardResponse,
-        stimulus: `<div class="instruction-container" style="text-align:center;">
-            <p>You successfully completed the quiz! Press any key to begin the task.</p>
-        </div>`,
+        stimulus: "<p>You successfully completed the quiz! Press any key to begin the task.</p>",
         choices: "ALL_KEYS",
     };
 }
 
 // ─── Attention checks (identical to the other tasks) ──────────────────────────
 // Placed after a random trial within a block, avoiding its first 6 and last 3 trials.
-// The correct key is never j, k (response keys) or x (the hidden AI-agent key).
-const ATTENTION_KEYS = "abcdefghijklmnopqrstuvwxyz".split("").filter(k => k !== "j" && k !== "k" && k !== "x");
+// The correct key is never j, k (response keys), x (the hidden AI-agent key) or i (confusable with l).
+// Unanswered checks time out after params.attention_check_duration and count as failed.
+const ATTENTION_KEYS = "abcdefghijklmnopqrstuvwxyz".split("").filter(k => !["i", "j", "k", "x"].includes(k));
 
 function planAttentionCheck(phase, blockStart, blockEnd) {
     return {
@@ -486,6 +493,7 @@ function buildAttentionCheckTrial(check) {
                 as it is immoral to corrupt scientific data.<br> We really hope you follow the instructions!</p>
         </div>`,
         choices: "ALL_KEYS",
+        trial_duration: params.attention_check_duration,
         data: {
             is_attention_check: true,
             phase: check.phase,
@@ -510,6 +518,9 @@ function buildRatingTrial(index) {
         require_movement: true,
         prompt: "<p>How much do you prefer to eat this food?</p>",
         data: { is_rating_trial: true, phase: "rating" },
+        on_load() {  // browser's own slider, as in Li et al.'s jsPsych 6 (jsPsych 8 restyles it)
+            document.querySelector("#jspsych-html-slider-response-response").classList.remove("jspsych-slider");
+        },
         on_finish(data) {
             const item = TASK_STATE.ratingItems[index];
             item.rating = data.response;
@@ -575,8 +586,8 @@ function buildChoiceTrials(index) {
             type: jsPsychHtmlKeyboardResponse,
             stimulus: () => {
                 const { rt, side } = TASK_STATE.lastChoice;
-                if (side === null) return "<div class='choice-message'>Too Slow<br><br>(Press j=left / k=right)</div>";
-                if (rt < params.too_fast_rt) return "<div class='choice-message'>Too Fast<br><br>(Press j=left / k=right)</div>";
+                if (side === null) return "<div class='choice-message'>Too Slow!</div>";
+                if (rt < params.too_fast_rt) return "<div class='choice-message'>Too Fast!</div>";
                 return choiceImages(trial(), side) + "<p class='subtitle2'>&nbsp;</p>";
             },
             choices: "NO_KEYS",

@@ -18,24 +18,36 @@
     <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
     <link rel="stylesheet" href="https://unpkg.com/jspsych@8.2.3/css/jspsych.css">
 
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
 
     <style>
+        /* Trial screens follow Li et al.'s (2022) style.css on jsPsych's default stylesheet
+           (Open Sans 18px, default buttons), as in their original task. */
         body {
-            margin: 0;
-            min-height: 100vh;
             background: #ffffff;
-            color: #333333;
-            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
         }
 
-        .jspsych-content-wrapper {
-            max-width: 1300px;
+        /* ── Li et al.'s style.css ── */
+        p.instruct { text-align: center; max-width: 800px; font-size: 24px; margin-left: auto; margin-right: auto; }
+        p.title    { text-align: center; font-size: 36px; padding: 0 0 0 0; font-weight: bold; }
+        p.subtitle2 { text-align: center; font-size: 28px; line-height: 42px; }
+        div.fix {
+            display: inline-block;
+            text-align: center;
+            vertical-align: middle;
+            font-size: 72px;
         }
 
-        /* ── Instruction panels (same as the other tasks) ── */
+        /* Li et al.'s image styles: rating image, and choice images (grey border, green when picked) */
+        .food-img { width: 300px; padding: 10px; }
+        .choice-img { width: 300px; padding: 20px; margin: 5px; border: 5px solid #555; }
+        .choice-img.picked { border-color: #55CC33; }
+
+        .choice-message { font-size: 40px; font-weight: bold; color: red; }
+
+        /* Comprehension quiz questions, left-aligned as in Li et al.'s forms */
+        #jspsych-survey-multi-choice_form { max-width: 800px; margin: 0 auto; text-align: left; }
+
+        /* ── Screens not in Li et al.'s task (consent, attention checks, messages, survey) ── */
         .instruction-container {
             max-width: 900px;
             margin: 0 auto;
@@ -44,82 +56,9 @@
             border-radius: 20px;
             box-shadow: 0 14px 36px rgba(0, 0, 0, 0.08);
             text-align: left;
-            line-height: 1.65;
-            font-size: 1.1rem;
         }
 
-        .instruction-container h2 {
-            margin: 0 0 16px;
-            font-weight: 800;
-            color: #171717;
-            text-align: center;
-        }
-
-        .jspsych-btn {
-            padding: 12px 24px;
-            font-size: 1rem;
-            font-weight: 700;
-            border: none;
-            border-radius: 999px;
-            background: #171717;
-            color: #ffffff;
-            box-shadow: 0 8px 18px rgba(0, 0, 0, 0.12);
-            cursor: pointer;
-        }
-
-        .jspsych-btn:disabled {
-            background: #9a9a9a;
-            cursor: not-allowed;
-        }
-
-        /* ── Comprehension quiz (survey-multi-choice) ── */
-        #jspsych-survey-multi-choice_form {
-            max-width: 900px;
-            margin: 0 auto;
-            text-align: left;
-        }
-
-        .jspsych-survey-multi-choice-question {
-            margin: 18px 0;
-        }
-
-        .jspsych-survey-multi-choice-text {
-            font-weight: 600;
-        }
-
-        /* ── Task displays: Li et al. (2022) style.css ── */
-        .food-img {
-            width: 300px;
-            padding: 10px;
-        }
-
-        .choice-img {
-            width: 300px;
-            padding: 20px;
-            margin: 5px;
-            border: 5px solid #555;
-        }
-
-        .choice-img.picked {
-            border-color: #55CC33;
-        }
-
-        p.subtitle2 {
-            text-align: center;
-            font-size: 28px;
-            line-height: 42px;
-        }
-
-        .fix {
-            display: inline-block;
-            text-align: center;
-            vertical-align: middle;
-            font-size: 72px;
-        }
-
-        .choice-message {
-            font-size: 40px;
-        }
+        .instruction-container h2 { margin: 0 0 16px; text-align: center; }
 
         /* Turnstile verification styles */
         .turnstile-page { text-align: center; }
