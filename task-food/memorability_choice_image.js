@@ -435,9 +435,6 @@ function buildRatingTrial(index) {
         require_movement: true,
         prompt: "<p>How much do you prefer to eat this food?</p>",
         data: { is_rating_trial: true, phase: "rating" },
-        on_load() {  // browser's own slider, as in Li et al.'s jsPsych 6 (jsPsych 8 restyles it)
-            document.querySelector("#jspsych-html-slider-response-response").classList.remove("jspsych-slider");
-        },
         on_finish(data) {
             const item = TASK_STATE.ratingItems[index];
             item.rating = data.response;
