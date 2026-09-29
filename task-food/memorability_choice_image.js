@@ -1,10 +1,11 @@
 // Food choice task (preregistered Experiment 5): replication of Li, Bainbridge & Bakkour (2022), Exp 1B.
 // Li et al.'s single-file jsPsych 6 task (original/memorability_choice_image.js), ported to jsPsych 8 with:
-//   - the preregistered memorability-based choice pairs (see "Choice pairs" below)
+//   - only the low and high memorability terciles of their 138 foods (see "Stimuli" below), and their
+//     distant-value pairs made within each memorability group (see "Choice pairs" below)
 //   - no viewing phase or age check; Turnstile, browser check, comprehension-quiz gate and attention checks
 //     as in our other tasks; data saved to OSF via DataPipe and a Prolific redirect
 //   - a fix for missed choices, which lasted 7 s instead of 4 s in the original
-// Rating phase (rate all 138 foods) -> choice phase (138 two-alternative food choices).
+// Rating phase (rate 92 foods) -> choice phase (92 two-alternative food choices).
 
 // ════════════════════════════════════════════════════════════════════════════
 //  Settings
@@ -12,7 +13,7 @@
 const params = {
     experiment_id: "exp5-food-prereg-092226",
 
-    n_items: 138,
+    n_items: 92,
     n_attention_checks: 3,   // 1 in the rating phase, 2 in the choice phase (one per half)
 
     // Rating phase (Li et al. 2022 Exp 1B): 0-100 slider labelled 0 (least) to 10 (most),
@@ -27,7 +28,7 @@ const params = {
     too_fast_rt: 300,
     attention_check_duration: 5000,   // unanswered attention checks time out (and count as failed)
 
-    completion_time: 25,
+    completion_time: 20,
     base_pay: 5,
     data_pipe_id: "0eMBjYEVa3qX",
     osf_project_id: "2cm34",
@@ -42,12 +43,12 @@ const params = {
 // ════════════════════════════════════════════════════════════════════════════
 //  Stimuli
 // ════════════════════════════════════════════════════════════════════════════
-// The 138 Food Folio images used by Li et al., downloaded from their task host into stimuli/food/.
+// The 92 Food Folio images used here: the lowest and highest memorability terciles of the 138 images used by
+// Li et al., downloaded from their task host into stimuli/food/ (the middle tercile is not used).
 // memorability: corrected recognition (hit rate - false alarm rate) from Li et al. Exp 1A, copied verbatim from
 //   their task code (original/memorability_choice_image.js).
-// mem_group: fixed median split (69 low / 69 high), the same for every participant. Seven images tie at the
-//   median (0.475); 4 of them were assigned to "low" by one fixed random draw (numpy seed 20260928):
-//   Baked-Potato.jpg, Rigatoni-withtomato-sauce.jpg, White-Bread-Pepperidge-Farm-Hearty-White.jpg, Whole-milk.jpg.
+// mem_group: fixed tercile split, the same for every participant: "low" = the 46 lowest (memorability <= 0.415),
+//   "high" = the 46 highest (>= 0.537). No ties at either tercile boundary (next values: 0.419, 0.525).
 const FOOD_STIMULI = [
     { image_name: "1-milk.jpg", memorability: 0.365853658536585, mem_group: "low" },
     { image_name: "Air-popped-popcorn.jpg", memorability: 0.292682926829268, mem_group: "low" },
@@ -58,86 +59,57 @@ const FOOD_STIMULI = [
     { image_name: "Bagel-cream-cheese.jpg", memorability: 0.340909090909091, mem_group: "low" },
     { image_name: "Bagel-plain.jpg", memorability: 0.609756097560976, mem_group: "high" },
     { image_name: "Baguette-with-olive-oil.jpg", memorability: 0.4, mem_group: "low" },
-    { image_name: "Baked-Potato.jpg", memorability: 0.475, mem_group: "low" },
     { image_name: "Banana.jpg", memorability: 0.707317073170732, mem_group: "high" },
     { image_name: "Black-Beans-with-rice.jpg", memorability: 0.380952380952381, mem_group: "low" },
     { image_name: "Blueberries.jpg", memorability: 0.609756097560976, mem_group: "high" },
-    { image_name: "Breyers-Vanilla-Ice-cream.jpg", memorability: 0.463414634146341, mem_group: "low" },
-    { image_name: "Broccoli-Cauliflower-raw.jpg", memorability: 0.425, mem_group: "low" },
-    { image_name: "Broccoli-raw.jpg", memorability: 0.428571428571429, mem_group: "low" },
-    { image_name: "Brownie.jpg", memorability: 0.48780487804878, mem_group: "high" },
-    { image_name: "Burger-on-bun-homemade-80-lean.jpg", memorability: 0.441860465116279, mem_group: "low" },
     { image_name: "Burrito-Amy-Bean-Cheese.jpg", memorability: 0.6, mem_group: "high" },
     { image_name: "Cantaloupe.jpg", memorability: 0.55, mem_group: "high" },
     { image_name: "Carrot-Sticks.jpg", memorability: 0.318181818181818, mem_group: "low" },
-    { image_name: "Celery-Carrot-Sticks.jpg", memorability: 0.452380952380952, mem_group: "low" },
     { image_name: "Celery-sticks.jpg", memorability: 0.560975609756098, mem_group: "high" },
     { image_name: "Cheerios-dry.jpg", memorability: 0.365853658536585, mem_group: "low" },
     { image_name: "Cheese-cubes-mild-cheddar.jpg", memorability: 0.585365853658537, mem_group: "high" },
     { image_name: "Cheese-Nachos.jpg", memorability: 0.658536585365854, mem_group: "high" },
-    { image_name: "Cheeze-Itz.jpg", memorability: 0.428571428571429, mem_group: "low" },
     { image_name: "Cherries.jpg", memorability: 0.414634146341463, mem_group: "low" },
     { image_name: "Cherry-tomatoes.jpg", memorability: 0.65, mem_group: "high" },
-    { image_name: "Chicken-fingers-Perdue-Crispy-Chicken-Strips.jpg", memorability: 0.463414634146341, mem_group: "low" },
-    { image_name: "Chicken-noodle-soup-Campbells-Classic.jpg", memorability: 0.523809523809524, mem_group: "high" },
     { image_name: "Chicken-nuggets-w-BBQ-Sauce.jpg", memorability: 0.577777777777778, mem_group: "high" },
     { image_name: "Choc-Chip-cookies-Entenmanns.jpg", memorability: 0.35, mem_group: "low" },
-    { image_name: "Chocolate-dark-covered-pretzels-Flipz.jpg", memorability: 0.5, mem_group: "high" },
-    { image_name: "Chocolate-trail-mix.jpg", memorability: 0.476190476190476, mem_group: "high" },
     { image_name: "Cocktail-shrimp.jpg", memorability: 0.575, mem_group: "high" },
     { image_name: "Corn-on-Cob.jpg", memorability: 0.547619047619048, mem_group: "high" },
     { image_name: "Craisins-Ocean-Spray.jpg", memorability: 0.595238095238095, mem_group: "high" },
     { image_name: "Croissant-plain.jpg", memorability: 0.55, mem_group: "high" },
-    { image_name: "Cucumber-slices.jpg", memorability: 0.511111111111111, mem_group: "high" },
     { image_name: "Cupcakes-mini-frosted.jpg", memorability: 0.674418604651163, mem_group: "high" },
     { image_name: "Doritos-Nacho-Cheese.jpg", memorability: 0.619047619047619, mem_group: "high" },
     { image_name: "Doughnuts-frosted-yeast-type.jpg", memorability: 0.575, mem_group: "high" },
     { image_name: "Edamame.jpg", memorability: 0.390243902439024, mem_group: "low" },
     { image_name: "Egg-salad.jpg", memorability: 0.232558139534884, mem_group: "low" },
-    { image_name: "Eggs-fried.jpg", memorability: 0.452380952380952, mem_group: "low" },
     { image_name: "Eggs-hard-boiled.jpg", memorability: 0.609756097560976, mem_group: "high" },
     { image_name: "Falafel-withpita.jpg", memorability: 0.227272727272727, mem_group: "low" },
     { image_name: "French-Fries.jpg", memorability: 0.390243902439024, mem_group: "low" },
-    { image_name: "Fruit-Loops-w-whole-milk.jpg", memorability: 0.439024390243902, mem_group: "low" },
-    { image_name: "Fruit-salad.jpg", memorability: 0.5, mem_group: "high" },
-    { image_name: "Graham-crackers-Nabisco-Original.jpg", memorability: 0.488372093023256, mem_group: "high" },
     { image_name: "Granola-bar-Nature-Valley-Crunchy.jpg", memorability: 0.285714285714286, mem_group: "low" },
     { image_name: "Granola-with-whole-milk.jpg", memorability: 0.377777777777778, mem_group: "low" },
     { image_name: "Grapefruit.jpg", memorability: 0.55, mem_group: "high" },
     { image_name: "Grapes.jpg", memorability: 0.6, mem_group: "high" },
     { image_name: "Green-beans-raw.jpg", memorability: 0.636363636363636, mem_group: "high" },
-    { image_name: "Grilled-cheese.jpg", memorability: 0.463414634146342, mem_group: "low" },
     { image_name: "Grilled-chicken-strips.jpg", memorability: 0.414634146341463, mem_group: "low" },
     { image_name: "Hash-browns.jpg", memorability: 0.292682926829268, mem_group: "low" },
-    { image_name: "Hersheys-Kisses.jpg", memorability: 0.441860465116279, mem_group: "low" },
     { image_name: "Hot-dog-on-bun-withmustard.jpg", memorability: 0.571428571428571, mem_group: "high" },
-    { image_name: "Ice-cream-sundae-ice-cream-whip-cream-cherry.jpg", memorability: 0.511111111111111, mem_group: "high" },
     { image_name: "Kettle-Corn-Cracker-Jacks.jpg", memorability: 0.340909090909091, mem_group: "low" },
     { image_name: "Kit-Kat.jpg", memorability: 0.688888888888889, mem_group: "high" },
-    { image_name: "Kiwi.jpg", memorability: 0.463414634146341, mem_group: "low" },
     { image_name: "Lettuce-salad.jpg", memorability: 0.268292682926829, mem_group: "low" },
     { image_name: "Lollipops.jpg", memorability: 0.727272727272727, mem_group: "high" },
-    { image_name: "Lox.jpg", memorability: 0.476190476190476, mem_group: "high" },
     { image_name: "Lucky-Charms-with-1-milk.jpg", memorability: 0.575, mem_group: "high" },
-    { image_name: "Mac-and-cheese-Stouffers.jpg", memorability: 0.475, mem_group: "high" },
     { image_name: "Mango.jpg", memorability: 0.595238095238095, mem_group: "high" },
-    { image_name: "Mashed-potatoes-withbutter.jpg", memorability: 0.476190476190476, mem_group: "high" },
     { image_name: "Melba-Toast-rye-Old-London.jpg", memorability: 0.3, mem_group: "low" },
-    { image_name: "Minestrone-Soup-chunky-.jpg", memorability: 0.5, mem_group: "high" },
     { image_name: "Mini-muffins.jpg", memorability: 0.545454545454545, mem_group: "high" },
     { image_name: "MM-candies.jpg", memorability: 0.365853658536585, mem_group: "low" },
-    { image_name: "Mozzarella-sticks-withmarinara-sauce.jpg", memorability: 0.525, mem_group: "high" },
-    { image_name: "Mushrooms-raw.jpg", memorability: 0.428571428571429, mem_group: "low" },
     { image_name: "Olives-green-withpimento.jpg", memorability: 0.390243902439024, mem_group: "low" },
     { image_name: "Omelet-plain.jpg", memorability: 0.571428571428571, mem_group: "high" },
     { image_name: "Orange-sliced.jpg", memorability: 0.568181818181818, mem_group: "high" },
     { image_name: "Oreos.jpg", memorability: 0.536585365853659, mem_group: "high" },
     { image_name: "Peach.jpg", memorability: 0.35, mem_group: "low" },
     { image_name: "Peanut-butter-1.5-oz-wt-withbanana-small.jpg", memorability: 0.681818181818182, mem_group: "high" },
-    { image_name: "Peanut-Butter-Ritz-Bits-Crackers.jpg", memorability: 0.5, mem_group: "high" },
     { image_name: "Peanut-butter.jpg", memorability: 0.772727272727273, mem_group: "high" },
     { image_name: "Pear.jpg", memorability: 0.35, mem_group: "low" },
-    { image_name: "Pickles-dill.jpg", memorability: 0.523809523809524, mem_group: "high" },
     { image_name: "Pizza-restaurant.jpg", memorability: 0.86046511627907, mem_group: "high" },
     { image_name: "Pop-Tart-strawberry-frosted.jpg", memorability: 0.380952380952381, mem_group: "low" },
     { image_name: "Popsicles.jpg", memorability: 0.571428571428571, mem_group: "high" },
@@ -148,43 +120,26 @@ const FOOD_STIMULI = [
     { image_name: "Raspberries.jpg", memorability: 0.365853658536585, mem_group: "low" },
     { image_name: "Red-bell-pepper.jpg", memorability: 0.674418604651163, mem_group: "high" },
     { image_name: "Reeses-Peanut-butter-cups.jpg", memorability: 0.545454545454545, mem_group: "high" },
-    { image_name: "Reeses-Pieces.jpg", memorability: 0.441860465116279, mem_group: "low" },
-    { image_name: "Rice-Beans.jpg", memorability: 0.431818181818182, mem_group: "low" },
     { image_name: "Rice-Cakes.jpg", memorability: 0.386363636363636, mem_group: "low" },
-    { image_name: "Rigatoni-plain.jpg", memorability: 0.523809523809524, mem_group: "high" },
-    { image_name: "Rigatoni-withtomato-sauce.jpg", memorability: 0.475, mem_group: "low" },
     { image_name: "Ritz-crackers.jpg", memorability: 0.390243902439024, mem_group: "low" },
-    { image_name: "Roasted-potato.jpg", memorability: 0.452380952380952, mem_group: "low" },
     { image_name: "Salad-Spicy-Chicken-Caesar-Wendys-no-dressing.jpg", memorability: 0.325581395348837, mem_group: "low" },
-    { image_name: "Salami.jpg", memorability: 0.475, mem_group: "high" },
     { image_name: "Salmon-grilled.jpg", memorability: 0.261904761904762, mem_group: "low" },
     { image_name: "Saltine-crackers.jpg", memorability: -0.025, mem_group: "low" },
-    { image_name: "Seaweed-dehydrated.jpg", memorability: 0.523809523809524, mem_group: "high" },
     { image_name: "Shredded-wheat-1-biscuit-with-1-milk.jpg", memorability: 0.35, mem_group: "low" },
-    { image_name: "Skim-milk.jpg", memorability: 0.418604651162791, mem_group: "low" },
     { image_name: "Skittles.jpg", memorability: 0.292682926829268, mem_group: "low" },
-    { image_name: "Sour-patch-kids-candy.jpg", memorability: 0.476190476190476, mem_group: "high" },
     { image_name: "Soy-crisps.jpg", memorability: 0.317073170731707, mem_group: "low" },
     { image_name: "Steak-T-bone.jpg", memorability: 0.681818181818182, mem_group: "high" },
     { image_name: "Strawberries.jpg", memorability: 0.380952380952381, mem_group: "low" },
-    { image_name: "String-cheese.jpg", memorability: 0.48780487804878, mem_group: "high" },
     { image_name: "Sun-Chips.jpg", memorability: 0.404761904761905, mem_group: "low" },
-    { image_name: "Sushi-with-condiments.jpg", memorability: 0.475, mem_group: "high" },
     { image_name: "Swedish-Fish.jpg", memorability: 0.285714285714286, mem_group: "low" },
     { image_name: "Sweet-Potato.jpg", memorability: 0.585365853658537, mem_group: "high" },
     { image_name: "Taco-beef-Taco-Bell-soft-supreme-.jpg", memorability: 0.325, mem_group: "low" },
     { image_name: "Trail-mix.jpg", memorability: 0.4, mem_group: "low" },
     { image_name: "Tribe-hummus-withpita-chips.jpg", memorability: 0.536585365853659, mem_group: "high" },
     { image_name: "Triscuit.jpg", memorability: 0.2, mem_group: "low" },
-    { image_name: "Tuna-white-albacore-in-water-Bumble-Bee.jpg", memorability: 0.439024390243902, mem_group: "low" },
-    { image_name: "Turkey-breast-Oscar-Mayer-Deli-Select.jpg", memorability: 0.51219512195122, mem_group: "high" },
     { image_name: "Turkey-on-roll-with-lettuce-and-tomato.jpg", memorability: 0.365853658536585, mem_group: "low" },
     { image_name: "Turkey-sandwich-roll-with-lettuce-and-tomato.jpg", memorability: 0.25, mem_group: "low" },
-    { image_name: "Veggies-with-ranch-dip-Lays.jpg", memorability: 0.5, mem_group: "high" },
     { image_name: "Wheat-Bread-Pepperidge-Farm-100-WW.jpg", memorability: 0.404255319148936, mem_group: "low" },
-    { image_name: "White-Bread-Pepperidge-Farm-Hearty-White.jpg", memorability: 0.475, mem_group: "low" },
-    { image_name: "Whole-milk.jpg", memorability: 0.475, mem_group: "low" },
-    { image_name: "Yellow-popcorn.jpg", memorability: 0.463414634146341, mem_group: "low" },
     { image_name: "Yogurt-pretzels.jpg", memorability: 0.536585365853659, mem_group: "high" },
     { image_name: "Yogurt-with-granola-strawberries.jpg", memorability: 0.365853658536585, mem_group: "low" },
 ];
@@ -192,94 +147,56 @@ const FOOD_STIMULI = [
 // ════════════════════════════════════════════════════════════════════════════
 //  Choice pairs
 // ════════════════════════════════════════════════════════════════════════════
-// Items are split (fixed, see Stimuli above) into 69 high- and 69 low-memorability items. Within each group,
-// items are ranked 1..69 by the participant's own rating (1 = lowest; rating ties broken at random).
-// Every item then appears in exactly one similar-value pair and exactly one distant-value pair (138 trials):
-//
-// Similar value (69 pairs):
-//   - 35 ranks drawn at random: the high and low items at that rank are paired (35 high/low pairs)
-//   - the other 34 ranks are paired by value-rank adjacency within each group
-//     (17 high/high + 17 low/low: 1st+2nd remaining rank, 3rd+4th, ...), as in Li et al.
-// Distant value (69 pairs), one of two mirror-image templates (coin flip per participant):
-//   - 34 within-group pairs, 35 ranks apart: rank r (r = 1..34) with rank r+35, in group A for odd r, B for even r
-//   - 35 across-group pairs, 34 ranks apart: rank r (r = 1..35) with rank r+34 in the other group;
-//     the lower-ranked item is from B for odd r, A for even r
-//   where (A, B) = (low, high) or (high, low). With 69 items per group this is the only way to pair every item
-//   exactly once with within-group pairs 35 apart and across-group pairs 34 apart.
+// Every item appears in exactly one similar-value pair and exactly one distant-value pair (92 trials).
+// Similar value (46 pairs), exactly as in Li et al.: all 92 items are ranked by the participant's rating
+//   (tied ratings in the order they were rated) and adjacent ranks are paired (1st+2nd, 3rd+4th, ...), ignoring
+//   memorability, so these pairs can be high/high, low/low or high/low.
+// Distant value (46 pairs): Li et al.'s fixed-interval pairing (rank i with rank i + n/2), within each memorability
+//   group: the group's 46 items, in the same ranking, pair rank r with rank r+23 (r = 1..23), giving 23 high/high +
+//   23 low/low pairs.
+//   (A similar pair can never repeat a distant pair: 22 same-group items rank between a distant pair's items.)
 
-const N_PER_GROUP = 69;
-const N_CROSS_SIMILAR = 35;
-const DISTANT_WITHIN_GAP = 35;
-const DISTANT_ACROSS_GAP = 34;
+const N_PER_GROUP = 46;
+const DISTANT_GAP = N_PER_GROUP / 2;
 
 
-// items: [{image_name, mem_group, rating, ...}] -> {high: [...], low: [...]}, each sorted by rating
-// ascending (index 0 = rank 1), with ties in random order. Adds value_rank (1..69) to each item.
-function rankWithinGroups(items, rand) {
-    const groups = {};
-    for (const g of ["high", "low"]) {
-        const ranked = shuffle(items.filter(it => it.mem_group === g), rand)
-            .sort((a, b) => a.rating - b.rating);   // stable sort: ties stay in shuffled order
-        if (ranked.length !== N_PER_GROUP) throw new Error(`expected ${N_PER_GROUP} ${g} items, got ${ranked.length}`);
-        ranked.forEach((it, i) => { it.value_rank = i + 1; });
-        groups[g] = ranked;
-    }
-    return groups;
+// Items (in the order they were rated, which is random) stably sorted by rating ascending (index 0 = lowest), as in
+// Li et al.: tied ratings stay in rating order. Adds value_rank (1..92). Both pair types use this one ranking.
+function rankByRating(items) {
+    const ranked = items.slice().sort((a, b) => a.rating - b.rating);
+    ranked.forEach((it, i) => { it.value_rank = i + 1; });
+    return ranked;
 }
 
-function similarPairs(groups, rand) {
-    const ranks = Array.from({ length: N_PER_GROUP }, (_, i) => i + 1);
-    const crossRanks = new Set(shuffle(ranks, rand).slice(0, N_CROSS_SIMILAR));
-    const rest = ranks.filter(r => !crossRanks.has(r));
-    const at = (g, r) => groups[g][r - 1];
-    const pairs = [...crossRanks].sort((a, b) => a - b)
-        .map(r => [at("high", r), at("low", r)]);
-    for (let i = 0; i < rest.length; i += 2) {
-        for (const g of ["high", "low"]) pairs.push([at(g, rest[i]), at(g, rest[i + 1])]);
-    }
-    return pairs;
-}
-
-function distantPairs(groups, lowIsA) {
-    const [A, B] = lowIsA ? ["low", "high"] : ["high", "low"];
-    const at = (g, r) => groups[g][r - 1];
+function similarPairs(ranked) {
     const pairs = [];
-    for (let r = 1; r <= N_PER_GROUP - DISTANT_WITHIN_GAP; r++) {        // r = 1..34
-        const g = r % 2 === 1 ? A : B;
-        pairs.push([at(g, r), at(g, r + DISTANT_WITHIN_GAP)]);
-    }
-    for (let r = 1; r <= N_PER_GROUP - DISTANT_ACROSS_GAP; r++) {        // r = 1..35
-        const [lo, hi] = r % 2 === 1 ? [B, A] : [A, B];
-        pairs.push([at(lo, r), at(hi, r + DISTANT_ACROSS_GAP)]);
+    for (let i = 0; i < ranked.length; i += 2) pairs.push([ranked[i], ranked[i + 1]]);
+    return pairs;
+}
+
+// Adds mem_group_value_rank (1..46), each item's rank within its memorability group.
+function distantPairs(ranked) {
+    const pairs = [];
+    for (const g of ["low", "high"]) {
+        const group = ranked.filter(it => it.mem_group === g);
+        if (group.length !== N_PER_GROUP) throw new Error(`expected ${N_PER_GROUP} ${g} items, got ${group.length}`);
+        group.forEach((it, i) => { it.mem_group_value_rank = i + 1; });
+        for (let r = 0; r < DISTANT_GAP; r++) pairs.push([group[r], group[r + DISTANT_GAP]]);
     }
     return pairs;
 }
 
-const pairKey = ([a, b]) => [a.image_name, b.image_name].sort().join("|");
 const memPairType = ([a, b]) => a.mem_group !== b.mem_group ? "high_low" : `${a.mem_group}_${a.mem_group}`;
 
-// Returns 138 shuffled trials: {pair_type, mem_pair_type, left, right, distant_template}.
+// Returns 92 shuffled trials: {pair_type, mem_pair_type, left, right}.
 function buildChoicePairs(items, rand = Math.random) {
-    const groups = rankWithinGroups(items, rand);
-    const lowIsA = rand() < 0.5;
-    const distant = distantPairs(groups, lowIsA);
-    const distantKeys = new Set(distant.map(pairKey));
-    // A similar pair can only repeat a distant pair if 34 consecutive ranks were all drawn for the
-    // high/low pairs (vanishingly unlikely); redraw the similar pairs if it ever happens.
-    let similar;
-    do { similar = similarPairs(groups, rand); } while (similar.some(p => distantKeys.has(pairKey(p))));
-
+    const ranked = rankByRating(items);
     const trials = [
-        ...similar.map(p => ({ pair_type: "similar", pair: p })),
-        ...distant.map(p => ({ pair_type: "distant", pair: p })),
+        ...similarPairs(ranked).map(p => ({ pair_type: "similar", pair: p })),
+        ...distantPairs(ranked).map(p => ({ pair_type: "distant", pair: p })),
     ].map(t => {
         const [left, right] = rand() < 0.5 ? t.pair : [t.pair[1], t.pair[0]];
-        return {
-            pair_type: t.pair_type,
-            mem_pair_type: memPairType(t.pair),
-            distant_template: lowIsA ? "low_odd_within" : "high_odd_within",
-            left, right,
-        };
+        return { pair_type: t.pair_type, mem_pair_type: memPairType(t.pair), left, right };
     });
     return shuffle(trials, rand);
 }
@@ -565,12 +482,12 @@ function buildChoiceTrials(index) {
                     [`${s}_mem_group`]: t[s].mem_group,
                     [`${s}_value`]: t[s].rating,
                     [`${s}_value_rank`]: t[s].value_rank,
+                    [`${s}_mem_group_value_rank`]: t[s].mem_group_value_rank,
                 });
                 Object.assign(data, card("left"), card("right"), {
                     trial_number: index + 1,
                     pair_type: t.pair_type,
                     mem_pair_type: t.mem_pair_type,
-                    distant_template: t.distant_template,
                     response_key: data.response,
                     chosen_side: side,
                     chose_right: side === null ? null : Number(side === "right"),
