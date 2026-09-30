@@ -42,7 +42,7 @@ const params = {
     attention_check_duration: 5000,   // unanswered attention checks time out (and count as failed)
 
     completion_time: 15,
-    base_pay: 5,
+    base_pay: 4,
     data_pipe_id: "0eMBjYEVa3qX",
     osf_project_id: "2cm34",
     osf_component_id: "8d2cb",
