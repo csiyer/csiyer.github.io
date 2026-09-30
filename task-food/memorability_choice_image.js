@@ -40,7 +40,7 @@ const params = {
     too_fast_rt: 300,
     attention_check_duration: 5000,   // unanswered attention checks time out (and count as failed)
 
-    completion_time: 20,
+    completion_time: 15,
     base_pay: 5,
     data_pipe_id: "0eMBjYEVa3qX",
     osf_project_id: "2cm34",
