@@ -1,19 +1,31 @@
 // Food choice task (preregistered Experiment 5): replication of Li, Bainbridge & Bakkour (2022), Exp 1B.
 // Li et al.'s single-file jsPsych 6 task (original/memorability_choice_image.js), ported to jsPsych 8 with:
-//   - only the low and high memorability terciles of their 138 foods (see "Stimuli" below), and their
-//     distant-value pairs made within each memorability group (see "Choice pairs" below)
+//   - only the 48 lowest- and 48 highest-memorability of their 138 foods (see "Stimuli" below), and their
+//     distant-value pairs made within each memorability group, with smaller rank gaps (see "Choice pairs" below)
 //   - no viewing phase or age check; Turnstile, browser check, comprehension-quiz gate and attention checks
 //     as in our other tasks; data saved to OSF via DataPipe and a Prolific redirect
 //   - a fix for missed choices, which lasted 7 s instead of 4 s in the original
-// Rating phase (rate 92 foods) -> choice phase (92 two-alternative food choices).
+// Rating phase (rate 96 foods) -> choice phase (96 two-alternative food choices).
+//
+// PILOT VERSION (2026-09-30): differs from the preregistered Experiment 5 task (tasks/food_choice/ in the
+// value-associability repo; 92 foods, distant gap 23) in n_per_group (48) and distant_gap_counts (below).
 
 // ════════════════════════════════════════════════════════════════════════════
 //  Settings
 // ════════════════════════════════════════════════════════════════════════════
 const params = {
-    experiment_id: "exp5-food-prereg-092226",
+    experiment_id: "exp5-food-gap12x8-pilot-093026",
 
-    n_items: 92,
+    n_items: 96,
+    n_per_group: 48,   // foods per memorability group (low, high)
+
+    // Distant-value pairs: how many pairs of each within-group rank gap, per memorability group (must sum to
+    // n_per_group / 2). Each participant gets one pairing drawn uniformly from all that use every item once.
+    //   {12: 12, 8: 12} = this pilot (gaps of 12 and 8, interleaved)
+    //   {24: 24}        = Li et al.'s rank i with i + n/2 (the preregistered rule, with 48 per group)
+    //   {12: 24}        = gap 12 only (forces separate top and bottom halves)
+    // Any gap works alone if it divides 24 (24, 12, 8, 6, 4, 3, 2, 1); gaps can be mixed if a pairing exists.
+    distant_gap_counts: { 12: 12, 8: 12 },
     n_attention_checks: 3,   // 1 in the rating phase, 2 in the choice phase (one per half)
 
     // Rating phase (Li et al. 2022 Exp 1B): 0-100 slider labelled 0 (least) to 10 (most),
@@ -33,7 +45,7 @@ const params = {
     data_pipe_id: "0eMBjYEVa3qX",
     osf_project_id: "2cm34",
     osf_component_id: "8d2cb",
-    data_folder: "food_choice",
+    data_folder: "food_choice/gap_pilot",
     prolific_completion_code: "C16BI3NH",
 
     consent_pdf: "https://csiyer.github.io/files/online_consent_form.pdf",
@@ -43,12 +55,14 @@ const params = {
 // ════════════════════════════════════════════════════════════════════════════
 //  Stimuli
 // ════════════════════════════════════════════════════════════════════════════
-// The 92 Food Folio images used here: the lowest and highest memorability terciles of the 138 images used by
-// Li et al., downloaded from their task host into stimuli/food/ (the middle tercile is not used).
+// The 96 Food Folio images used here: the 48 lowest- and 48 highest-memorability of the 138 images used by
+// Li et al., downloaded from their task host into stimuli/food/ (the middle 42 are not used).
 // memorability: corrected recognition (hit rate - false alarm rate) from Li et al. Exp 1A, copied verbatim from
 //   their task code (original/memorability_choice_image.js).
-// mem_group: fixed tercile split, the same for every participant: "low" = the 46 lowest (memorability <= 0.415),
-//   "high" = the 46 highest (>= 0.537). No ties at either tercile boundary (next values: 0.419, 0.525).
+// mem_group: fixed split, the same for every participant: "low" = the 48 lowest (memorability <= 0.425),
+//   "high" = the 48 highest (>= 0.5238). No tie at the low boundary (next value 0.4286). At the high boundary
+//   four foods tie at 0.5238 (Chicken noodle soup, Pickles, Rigatoni plain, Seaweed) and one slot is left: the
+//   alphabetically first (Chicken noodle soup) is used.
 const FOOD_STIMULI = [
     { image_name: "1-milk.jpg", memorability: 0.365853658536585, mem_group: "low" },
     { image_name: "Air-popped-popcorn.jpg", memorability: 0.292682926829268, mem_group: "low" },
@@ -62,6 +76,7 @@ const FOOD_STIMULI = [
     { image_name: "Banana.jpg", memorability: 0.707317073170732, mem_group: "high" },
     { image_name: "Black-Beans-with-rice.jpg", memorability: 0.380952380952381, mem_group: "low" },
     { image_name: "Blueberries.jpg", memorability: 0.609756097560976, mem_group: "high" },
+    { image_name: "Broccoli-Cauliflower-raw.jpg", memorability: 0.425, mem_group: "low" },
     { image_name: "Burrito-Amy-Bean-Cheese.jpg", memorability: 0.6, mem_group: "high" },
     { image_name: "Cantaloupe.jpg", memorability: 0.55, mem_group: "high" },
     { image_name: "Carrot-Sticks.jpg", memorability: 0.318181818181818, mem_group: "low" },
@@ -71,6 +86,7 @@ const FOOD_STIMULI = [
     { image_name: "Cheese-Nachos.jpg", memorability: 0.658536585365854, mem_group: "high" },
     { image_name: "Cherries.jpg", memorability: 0.414634146341463, mem_group: "low" },
     { image_name: "Cherry-tomatoes.jpg", memorability: 0.65, mem_group: "high" },
+    { image_name: "Chicken-noodle-soup-Campbells-Classic.jpg", memorability: 0.523809523809524, mem_group: "high" },
     { image_name: "Chicken-nuggets-w-BBQ-Sauce.jpg", memorability: 0.577777777777778, mem_group: "high" },
     { image_name: "Choc-Chip-cookies-Entenmanns.jpg", memorability: 0.35, mem_group: "low" },
     { image_name: "Cocktail-shrimp.jpg", memorability: 0.575, mem_group: "high" },
@@ -102,6 +118,7 @@ const FOOD_STIMULI = [
     { image_name: "Melba-Toast-rye-Old-London.jpg", memorability: 0.3, mem_group: "low" },
     { image_name: "Mini-muffins.jpg", memorability: 0.545454545454545, mem_group: "high" },
     { image_name: "MM-candies.jpg", memorability: 0.365853658536585, mem_group: "low" },
+    { image_name: "Mozzarella-sticks-withmarinara-sauce.jpg", memorability: 0.525, mem_group: "high" },
     { image_name: "Olives-green-withpimento.jpg", memorability: 0.390243902439024, mem_group: "low" },
     { image_name: "Omelet-plain.jpg", memorability: 0.571428571428571, mem_group: "high" },
     { image_name: "Orange-sliced.jpg", memorability: 0.568181818181818, mem_group: "high" },
@@ -126,6 +143,7 @@ const FOOD_STIMULI = [
     { image_name: "Salmon-grilled.jpg", memorability: 0.261904761904762, mem_group: "low" },
     { image_name: "Saltine-crackers.jpg", memorability: -0.025, mem_group: "low" },
     { image_name: "Shredded-wheat-1-biscuit-with-1-milk.jpg", memorability: 0.35, mem_group: "low" },
+    { image_name: "Skim-milk.jpg", memorability: 0.418604651162791, mem_group: "low" },
     { image_name: "Skittles.jpg", memorability: 0.292682926829268, mem_group: "low" },
     { image_name: "Soy-crisps.jpg", memorability: 0.317073170731707, mem_group: "low" },
     { image_name: "Steak-T-bone.jpg", memorability: 0.681818181818182, mem_group: "high" },
@@ -147,21 +165,23 @@ const FOOD_STIMULI = [
 // ════════════════════════════════════════════════════════════════════════════
 //  Choice pairs
 // ════════════════════════════════════════════════════════════════════════════
-// Every item appears in exactly one similar-value pair and exactly one distant-value pair (92 trials).
-// Similar value (46 pairs), exactly as in Li et al.: all 92 items are ranked by the participant's rating
+// Every item appears in exactly one similar-value pair and exactly one distant-value pair (96 trials).
+// Similar value (48 pairs), exactly as in Li et al.: all 96 items are ranked by the participant's rating
 //   (tied ratings in the order they were rated) and adjacent ranks are paired (1st+2nd, 3rd+4th, ...), ignoring
 //   memorability, so these pairs can be high/high, low/low or high/low.
-// Distant value (46 pairs): Li et al.'s fixed-interval pairing (rank i with rank i + n/2), within each memorability
-//   group: the group's 46 items, in the same ranking, pair rank r with rank r+23 (r = 1..23), giving 23 high/high +
-//   23 low/low pairs.
-//   (A similar pair can never repeat a distant pair: 22 same-group items rank between a distant pair's items.)
+// Distant value (48 pairs): made within each memorability group from the group's 48 items in the same ranking.
+//   Every item is used once and every pair's rank gap is one of params.distant_gap_counts' gaps, with exactly
+//   that many pairs of each gap. Among all pairings that satisfy this, one is drawn uniformly at random per
+//   participant and used for both groups (so the two groups get the same rank structure), giving 24 high/high +
+//   24 low/low pairs. With {12: 12, 8: 12} the gaps of 12 and 8 interleave (ranks split into 4 sets by rank mod 4;
+//   each set chains with steps of 8 and 12), so there is no boundary between separately paired halves. Items near
+//   the ends of each chain are somewhat more often in gap-8 pairs, so gap size is slightly related to value rank.
 
-const N_PER_GROUP = 46;
-const DISTANT_GAP = N_PER_GROUP / 2;
+const N_PER_GROUP = params.n_per_group;
 
 
 // Items (in the order they were rated, which is random) stably sorted by rating ascending (index 0 = lowest), as in
-// Li et al.: tied ratings stay in rating order. Adds value_rank (1..92). Both pair types use this one ranking.
+// Li et al.: tied ratings stay in rating order. Adds value_rank (1..96). Both pair types use this one ranking.
 function rankByRating(items) {
     const ranked = items.slice().sort((a, b) => a.rating - b.rating);
     ranked.forEach((it, i) => { it.value_rank = i + 1; });
@@ -174,26 +194,68 @@ function similarPairs(ranked) {
     return pairs;
 }
 
-// Adds mem_group_value_rank (1..46), each item's rank within its memorability group.
-function distantPairs(ranked) {
+// Draws uniformly from all pairings of ranks 0..n-1 in which every rank is used once and there are exactly
+// gapCounts[g] pairs with rank gap g. Returns [[lowerRank, higherRank], ...]. Counts the completions of each partial
+// pairing (going up the ranks, pairing each still-unpaired rank with one g above it), then samples choices in
+// proportion to those counts.
+function sampleGapPairing(n, gapCounts, rand = Math.random) {
+    const gaps = Object.keys(gapCounts).map(Number);
+    if (Math.max(...gaps) > 30) throw new Error("distant gaps must be <= 30");
+    const memo = new Map();
+    // ways to finish from rank i; taken bit j = rank i+j already paired; left[k] = pairs of gaps[k] still to make
+    function count(i, taken, left) {
+        if (i === n) return left.every(c => c === 0) ? 1 : 0;
+        if (taken & 1) return count(i + 1, taken >>> 1, left);
+        const key = `${i},${taken},${left}`;
+        if (memo.has(key)) return memo.get(key);
+        let total = 0;
+        for (const opt of options(i, taken, left)) total += count(i + 1, opt.taken, opt.left);
+        memo.set(key, total);
+        return total;
+    }
+    function options(i, taken, left) {
+        return gaps.flatMap((g, k) => (left[k] > 0 && i + g < n && !((taken >>> g) & 1))
+            ? [{ g, taken: (taken | (1 << g)) >>> 1, left: left.map((c, kk) => kk === k ? c - 1 : c) }] : []);
+    }
+    let left = gaps.map(g => gapCounts[g]);
+    if (count(0, 0, left) === 0) throw new Error(`no pairing of ${n} items with gap counts ${JSON.stringify(gapCounts)}`);
+    const pairs = [];
+    let taken = 0;
+    for (let i = 0; i < n; i++) {
+        if (taken & 1) { taken >>>= 1; continue; }
+        const opts = options(i, taken, left);
+        const weights = opts.map(o => count(i + 1, o.taken, o.left));
+        let x = rand() * weights.reduce((a, b) => a + b, 0);
+        let pick = opts.length - 1;
+        for (let k = 0; k < opts.length; k++) { if (x < weights[k]) { pick = k; break; } x -= weights[k]; }
+        pairs.push([i, i + opts[pick].g]);
+        taken = opts[pick].taken;
+        left = opts[pick].left;
+    }
+    return pairs;
+}
+
+// Adds mem_group_value_rank (1..48), each item's rank within its memorability group.
+function distantPairs(ranked, rand = Math.random) {
+    const rankPairs = sampleGapPairing(N_PER_GROUP, params.distant_gap_counts, rand);
     const pairs = [];
     for (const g of ["low", "high"]) {
         const group = ranked.filter(it => it.mem_group === g);
         if (group.length !== N_PER_GROUP) throw new Error(`expected ${N_PER_GROUP} ${g} items, got ${group.length}`);
         group.forEach((it, i) => { it.mem_group_value_rank = i + 1; });
-        for (let r = 0; r < DISTANT_GAP; r++) pairs.push([group[r], group[r + DISTANT_GAP]]);
+        for (const [i, j] of rankPairs) pairs.push([group[i], group[j]]);
     }
     return pairs;
 }
 
 const memPairType = ([a, b]) => a.mem_group !== b.mem_group ? "high_low" : `${a.mem_group}_${a.mem_group}`;
 
-// Returns 92 shuffled trials: {pair_type, mem_pair_type, left, right}.
+// Returns 96 shuffled trials: {pair_type, mem_pair_type, left, right}.
 function buildChoicePairs(items, rand = Math.random) {
     const ranked = rankByRating(items);
     const trials = [
         ...similarPairs(ranked).map(p => ({ pair_type: "similar", pair: p })),
-        ...distantPairs(ranked).map(p => ({ pair_type: "distant", pair: p })),
+        ...distantPairs(ranked, rand).map(p => ({ pair_type: "distant", pair: p })),
     ].map(t => {
         const [left, right] = rand() < 0.5 ? t.pair : [t.pair[1], t.pair[0]];
         return { pair_type: t.pair_type, mem_pair_type: memPairType(t.pair), left, right };
@@ -485,6 +547,9 @@ function buildChoiceTrials(index) {
                     trial_number: index + 1,
                     pair_type: t.pair_type,
                     mem_pair_type: t.mem_pair_type,
+                    // within-group rank gap of a distant pair (12 or 8 in this pilot); null on similar trials
+                    distant_gap: t.pair_type === "distant"
+                        ? Math.abs(t.left.mem_group_value_rank - t.right.mem_group_value_rank) : null,
                     response_key: data.response,
                     chosen_side: side,
                     chose_right: side === null ? null : Number(side === "right"),
