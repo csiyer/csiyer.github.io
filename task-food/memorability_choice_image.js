@@ -14,18 +14,19 @@
 //  Settings
 // ════════════════════════════════════════════════════════════════════════════
 const params = {
-    experiment_id: "exp5-food-gap12x8-pilot-093026",
+    experiment_id: "exp5-food-gap8-pilot-093026",
 
     n_items: 96,
     n_per_group: 48,   // foods per memorability group (low, high)
 
     // Distant-value pairs: how many pairs of each within-group rank gap, per memorability group (must sum to
     // n_per_group / 2). Each participant gets one pairing drawn uniformly from all that use every item once.
-    //   {12: 12, 8: 12} = this pilot (gaps of 12 and 8, interleaved)
+    //   {8: 24}         = this pilot (gap 8 only: three chunks of 16 ranks)
+    //   {12: 12, 8: 12} = first pilot (exp5-food-gap12x8-pilot-093026; gaps of 12 and 8, interleaved)
     //   {24: 24}        = Li et al.'s rank i with i + n/2 (the preregistered rule, with 48 per group)
     //   {12: 24}        = gap 12 only (forces separate top and bottom halves)
     // Any gap works alone if it divides 24 (24, 12, 8, 6, 4, 3, 2, 1); gaps can be mixed if a pairing exists.
-    distant_gap_counts: { 12: 12, 8: 12 },
+    distant_gap_counts: { 8: 24 },
     n_attention_checks: 3,   // 1 in the rating phase, 2 in the choice phase (one per half)
 
     // Rating phase (Li et al. 2022 Exp 1B): 0-100 slider labelled 0 (least) to 10 (most),
@@ -547,7 +548,7 @@ function buildChoiceTrials(index) {
                     trial_number: index + 1,
                     pair_type: t.pair_type,
                     mem_pair_type: t.mem_pair_type,
-                    // within-group rank gap of a distant pair (12 or 8 in this pilot); null on similar trials
+                    // within-group rank gap of a distant pair (8 in this pilot); null on similar trials
                     distant_gap: t.pair_type === "distant"
                         ? Math.abs(t.left.mem_group_value_rank - t.right.mem_group_value_rank) : null,
                     response_key: data.response,
