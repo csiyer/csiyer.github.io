@@ -7,7 +7,7 @@
 //   - a fix for missed choices, which lasted 7 s instead of 4 s in the original
 // Rating phase (rate 96 foods) -> choice phase (96 two-alternative food choices).
 //
-// PILOT VERSION (2026-09-30): differs from the preregistered Experiment 5 task (tasks/food_choice/replication_gap24/ in the
+// PILOT VERSION (2026-09-30): differs from the preregistered Experiment 5 task (tasks/food_choice/replication_gap23/ in the
 // value-associability repo; 92 foods, distant gap 23) in n_per_group (48) and distant_gap_counts (below).
 
 // ════════════════════════════════════════════════════════════════════════════
@@ -46,7 +46,7 @@ const params = {
     data_pipe_id: "0eMBjYEVa3qX",
     osf_project_id: "2cm34",
     osf_component_id: "8d2cb",
-    data_folder: "food_choice/gap_pilot",
+    data_folder: "food_choice/replication_gap8",
     prolific_completion_code: "C16BI3NH",
 
     consent_pdf: "https://csiyer.github.io/files/online_consent_form.pdf",
