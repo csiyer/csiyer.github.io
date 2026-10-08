@@ -14,7 +14,7 @@
 //  Settings
 // ════════════════════════════════════════════════════════════════════════════
 const params = {
-    experiment_id: "exp5-food-gap8-full-100726",
+    experiment_id: "exp5-food-gap8-prereg-100926",
 
     n_items: 96,
     n_per_group: 48,   // foods per memorability group (low, high)
