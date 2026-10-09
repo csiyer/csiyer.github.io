@@ -60,6 +60,22 @@
 
         .instruction-container h2 { margin: 0 0 16px; text-align: center; }
 
+        /* EAT-26 questionnaire */
+        .instruction-container.eat-wide { max-width: 1100px; }
+        .eat-part-a p { margin: 14px 0; }
+        .eat-number { width: 70px; margin-left: 6px; font-size: 16px; }
+        .eat-table { width: 100%; border-collapse: separate; border-spacing: 0; table-layout: fixed; font-size: 16px; }
+        .eat-table th:first-child { width: 46%; }
+        /* option labels centered over their radio buttons, and frozen at the top while the list scrolls */
+        .eat-table th { position: sticky; top: 0; z-index: 1; background: #ffffff; border-bottom: 1px solid #bbb;
+                        font-size: 14px; font-weight: 600; padding: 8px 2px; text-align: center; vertical-align: bottom; }
+        .eat-table td { text-align: center; padding: 7px 2px; border-top: 1px dotted #ccc; }
+        .eat-table td.eat-item { text-align: left; }
+        .eat-table tbody tr:nth-child(even) { background: #f6f6f6; }
+        .eat-table input[type="radio"] { transform: scale(1.2); cursor: pointer; }
+        .eat-yesno label { margin-left: 20px; }
+        .eat-note { font-size: 14px; color: #555; }
+
         /* Turnstile verification styles */
         .turnstile-page { text-align: center; }
         .turnstile-widget { display: flex; justify-content: center; margin-bottom: 20px; }

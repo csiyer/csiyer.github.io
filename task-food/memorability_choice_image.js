@@ -41,8 +41,8 @@ const params = {
     too_fast_rt: 300,
     attention_check_duration: 5000,   // unanswered attention checks time out (and count as failed)
 
-    completion_time: 15,
-    base_pay: 4,
+    completion_time: 18,
+    base_pay: 4.50,
     data_pipe_id: "0eMBjYEVa3qX",
     osf_project_id: "2cm34",
     osf_component_id: "8d2cb",
@@ -586,6 +586,118 @@ function buildChoiceTrials(index) {
     ];
 }
 
+// ─── EAT-26 (Garner et al., 1982), end of study ───────────────────────────────
+// Part A without birth date and gender (Prolific records age and sex), then Part B and Part C on a page each.
+// Responses are saved as labels (eat_b1..eat_b26, eat_c_a..eat_c_e); eat26_score is the standard total:
+// items 1-25 Always/Usually/Often = 3/2/1, item 26 reversed (Sometimes/Rarely/Never = 1/2/3).
+const EAT26_ITEMS = [
+    "Am terrified about being overweight.",
+    "Avoid eating when I am hungry.",
+    "Find myself preoccupied with food.",
+    "Have gone on eating binges where I feel that I may not be able to stop.",
+    "Cut my food into small pieces.",
+    "Aware of the calorie content of foods that I eat.",
+    "Particularly avoid food with a high carbohydrate content (i.e. bread, rice, potatoes, etc.)",
+    "Feel that others would prefer if I ate more.",
+    "Vomit after I have eaten.",
+    "Feel extremely guilty after eating.",
+    "Am preoccupied with a desire to be thinner.",
+    "Think about burning up calories when I exercise.",
+    "Other people think that I am too thin.",
+    "Am preoccupied with the thought of having fat on my body.",
+    "Take longer than others to eat my meals.",
+    "Avoid foods with sugar in them.",
+    "Eat diet foods.",
+    "Feel that food controls my life.",
+    "Display self-control around food.",
+    "Feel that others pressure me to eat.",
+    "Give too much time and thought to food.",
+    "Feel uncomfortable after eating sweets.",
+    "Engage in dieting behavior.",
+    "Like my stomach to be empty.",
+    "Have the impulse to vomit after meals.",
+    "Enjoy trying new rich foods.",
+];
+const EAT26_OPTIONS = ["Always", "Usually", "Often", "Sometimes", "Rarely", "Never"];
+const EAT26_BEHAVIOR_ITEMS = [
+    ["a", "Gone on eating binges where you feel that you may not be able to stop?*"],
+    ["b", "Ever made yourself sick (vomited) to control your weight or shape?"],
+    ["c", "Ever used laxatives, diet pills or diuretics (water pills) to control your weight or shape?"],
+    ["d", "Exercised more than 60 minutes a day to lose or to control your weight?"],
+];
+const EAT26_BEHAVIOR_OPTIONS = ["Never", "Once a month or less", "2-3 times a month", "Once a week",
+                                "2-6 times a week", "Once a day or more"];
+
+function eat26Score(response) {
+    const forward = { Always: 3, Usually: 2, Often: 1 };
+    const reversed = { Sometimes: 1, Rarely: 2, Never: 3 };
+    let score = 0;
+    for (let i = 1; i <= 26; i++) {
+        score += ((i === 26 ? reversed : forward)[response[`eat_b${i}`]] || 0);
+    }
+    return score;
+}
+
+function eat26Table(rows, options) {
+    // rows: [[name, statement]]; one required radio group per row
+    const head = options.map(o => `<th>${o}</th>`).join("");
+    const body = rows.map(([name, statement]) => `<tr><td class="eat-item">${statement}</td>` +
+        options.map(o => `<td><input type="radio" name="${name}" value="${o}" aria-label="${o}" required></td>`).join("") +
+        `</tr>`).join("");
+    return `<table class="eat-table"><thead><tr><th></th>${head}</tr></thead><tbody>${body}</tbody></table>`;
+}
+
+function buildEat26Trials() {
+    const intro = `<p>Please fill out the questions below as accurately, honestly and completely as possible.
+        There are no right or wrong answers. All of your responses are confidential.</p>`;
+    const number = (name, unit) => `<input type="text" inputmode="decimal" name="${name}" class="eat-number" required> ${unit}`;
+    const save = (data) => { Object.assign(data, data.response); };
+    return [
+        {
+            type: jsPsychSurveyHtmlForm,
+            preamble: `<div class="instruction-container"><h2>Eating Attitudes Survey</h2>${intro}</div>`,
+            html: `<div class="instruction-container eat-part-a">
+                <p><b>Height:</b> ${number("eat_height_ft", "feet")} ${number("eat_height_in", "inches")}</p>
+                <p><b>Current weight:</b> ${number("eat_weight_current", "lbs")}</p>
+                <p><b>Highest weight (excluding pregnancy):</b> ${number("eat_weight_highest", "lbs")}</p>
+                <p><b>Lowest adult weight:</b> ${number("eat_weight_lowest", "lbs")}</p>
+                <p><b>Ideal weight:</b> ${number("eat_weight_ideal", "lbs")}</p>
+            </div>`,
+            button_label: "Continue",
+            data: { is_survey: true, is_eat26: true, eat26_part: "A" },
+            on_finish: save,
+        },
+        {
+            type: jsPsychSurveyHtmlForm,
+            preamble: `<div class="instruction-container"><p><b>Please check a response for each of the following statements:</b></p></div>`,
+            html: `<div class="instruction-container eat-wide">
+                ${eat26Table(EAT26_ITEMS.map((s, i) => [`eat_b${i + 1}`, `${i + 1}. ${s}`]), EAT26_OPTIONS)}
+            </div>`,
+            button_label: "Continue",
+            data: { is_survey: true, is_eat26: true, eat26_part: "B" },
+            on_finish(data) {
+                save(data);
+                data.eat26_score = eat26Score(data.response);
+            },
+        },
+        {
+            type: jsPsychSurveyHtmlForm,
+            preamble: `<div class="instruction-container"><p><b>In the past 6 months have you:</b></p></div>`,
+            html: `<div class="instruction-container eat-wide">
+                ${eat26Table(EAT26_BEHAVIOR_ITEMS.map(([k, s]) => [`eat_c_${k}`, `${k.toUpperCase()}. ${s}`]), EAT26_BEHAVIOR_OPTIONS)}
+                <p class="eat-yesno"><b>E. Lost 20 pounds or more in the past 6 months?</b>
+                    <label><input type="radio" name="eat_c_e" value="Yes" required> Yes</label>
+                    <label><input type="radio" name="eat_c_e" value="No" required> No</label></p>
+                <p class="eat-note">* Defined as eating much more than most people would under the same circumstances
+                    and feeling that eating is out of control.</p>
+            </div>`,
+            button_label: "Continue",
+            data: { is_survey: true, is_eat26: true, eat26_part: "C" },
+            on_finish: save,
+        },
+    ];
+}
+
 // ─── Main init ────────────────────────────────────────────────────────────────
 function initTask(jsPsych, prolific_id) {
     const stimuli = FOOD_STIMULI;
@@ -647,7 +759,7 @@ function initTask(jsPsych, prolific_id) {
         fullscreen_mode: true,
         message: `<div class="instruction-container" style="max-width:920px;">
             <h2>Welcome!</h2>
-            <p>This study takes about <strong>${params.completion_time} minutes</strong>. You will earn <strong>$${params.base_pay}</strong>.</p>
+            <p>This study takes about <strong>${params.completion_time} minutes</strong>. You will earn <strong>$${params.base_pay.toFixed(2)}</strong>.</p>
             <p>The data collected is for scientific research, so we ask you give your full attention and respond honestly and without the assistance of AI computer use.</p>
             <p>Please review the consent form below, and feel free to download a copy for your records.</p>
             <iframe src="${params.consent_pdf}" width="100%" height="480"
@@ -698,6 +810,8 @@ function initTask(jsPsych, prolific_id) {
         data: { is_survey: true },
         on_finish(data) { Object.assign(data, data.response); },
     });
+
+    timeline.push(...buildEat26Trials());
 
     // End screen
     timeline.push({
